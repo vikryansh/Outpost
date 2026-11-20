@@ -1,0 +1,58 @@
+=== OUTPOST CONCURRENCY & TRANSACTION VERIFICATION EVIDENCE ===
+Timestamp: 2026-11-20T22:48:16+05:30
+
+================================================================
+🧪 TEST 1: SCALED CONCURRENCY RACE (40 Requests vs 5 Units)
+================================================================
+[Setup] Node #3 seeded with remaining_units = 5.
+[Execution] Firing 40 simultaneous harvest requests via Promise.all()...
+
+--- TEST RESULTS ---
+Total Requests:         40
+Successful (200 OK):    5 (Expected: 5)
+Rejected (409 Exhaust): 35 (Expected: 35)
+Final Database Stock:   0 (Expected: 0)
+New Audit Logs Added:   5 (Expected: 5)
+Execution Duration:     169ms
+
+✅ ALL CONCURRENCY ASSERTIONS PASSED!
+Single-statement conditional atomic update mathematically guarantees 0 negative units under contention.
+
+
+================================================================
+🧪 TEST 2: SCALED TRADE ROLLBACK FAULT INJECTION (100 Iterations)
+================================================================
+[Setup] Seller initial Timber: 500, Buyer initial Copper Ore: 500.
+[Execution] Commencing 100 iterations with injected mid-transaction faults...
+
+--- TEST RESULTS ---
+Total Iterations:             100
+Injected Faults Caught:       100 (Expected: 100)
+Clean Rollbacks Verified:     100 (Expected: 100)
+Seller Timber Balance Drift:  0 (Expected: 0)
+Buyer Copper Balance Drift:   0 (Expected: 0)
+
+✅ ALL ROLLBACK ASSERTIONS PASSED (100/100)!
+Transactional atomicity guarantees zero state corruption or orphan items when exceptions occur.
+
+
+================================================================
+🧪 TEST 3: 5,000-ROW SCALING BENCHMARK & EXPLAIN ANALYZE
+================================================================
+[Current State] event_logs table currently has 5305 rows.
+[Verified] Total rows in event_logs: 5305 (Target: > 5,000 rows).
+
+--- EXPLAIN ANALYZE: Indexed Query (player_id, created_at DESC) ---
+  Limit  (cost=48.74..48.78 rows=14 width=170) (actual time=1.917..1.928 rows=50 loops=1)
+    ->  Sort  (cost=48.74..48.78 rows=14 width=170) (actual time=1.915..1.920 rows=50 loops=1)
+          Sort Key: created_at DESC
+          Sort Method: top-N heapsort  Memory: 75kB
+          ->  Bitmap Heap Scan on event_logs  (cost=4.39..48.48 rows=14 width=170) (actual time=0.193..0.949 rows=1905 loops=1)
+                Recheck Cond: (player_id = 1)
+                Heap Blocks: exact=169
+                ->  Bitmap Index Scan on idx_event_logs_player_created  (cost=0.00..4.39 rows=14 width=0) (actual time=0.142..0.143 rows=1905 loops=1)
+                      Index Cond: (player_id = 1)
+  Planning Time: 0.483 ms
+  Execution Time: 2.077 ms
+
+✅ 5,000-Row Scaling Benchmark Completed Successfully!
