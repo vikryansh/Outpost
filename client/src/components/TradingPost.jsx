@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeftRight, PlusCircle, CheckCircle, Handshake, AlertTriangle, Undo2 } from 'lucide-react';
+import { soundFx } from '../services/soundFx';
 
 export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAcceptOffer, onCancelOffer }) {
   const [tab, setTab] = useState('browse'); // 'browse' | 'create'
@@ -25,8 +26,10 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
     setLoading(false);
 
     if (res && res.error) {
+      soundFx.playAlert();
       setErrorMsg(res.message || 'Failed to post escrow offer (Insufficient items).');
     } else {
+      soundFx.playTrade();
       setTab('browse');
     }
   };
@@ -35,7 +38,10 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
     setErrorMsg(null);
     const res = await onAcceptOffer(tradeId);
     if (res && res.error) {
+      soundFx.playAlert();
       setErrorMsg(res.message || 'Cannot accept trade (Insufficient inventory).');
+    } else {
+      soundFx.playTrade();
     }
   };
 
@@ -44,7 +50,10 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
     if (onCancelOffer) {
       const res = await onCancelOffer(tradeId);
       if (res && res.error) {
+        soundFx.playAlert();
         setErrorMsg(res.message || 'Failed to cancel trade.');
+      } else {
+        soundFx.playClick();
       }
     }
   };

@@ -114,3 +114,24 @@ export async function resetGameWorld() {
   });
   return res.json();
 }
+
+export async function runConcurrencySimulation(nodeId = 8, requests = 20, playerId = 1) {
+  const res = await fetch(`${API_BASE}/api/simulation/concurrency-race`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeId, requests, playerId }),
+  });
+  return res.json();
+}
+
+export async function triggerSupplyDrop() {
+  const res = await fetch(`${API_BASE}/api/events/supply-drop`, {
+    method: 'POST',
+  });
+  return res.json();
+}
+
+export async function getSectorTelemetry() {
+  const res = await fetch(`${API_BASE}/api/sector/telemetry`);
+  return res.json();
+}

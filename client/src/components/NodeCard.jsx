@@ -5,6 +5,7 @@ import {
   OrbitalPodModel,
   DrillRigGraphic,
 } from './BiomeGraphics';
+import { soundFx } from '../services/soundFx';
 
 const BIOME_THEMES = {
   timber: {
@@ -95,6 +96,7 @@ export default function NodeCard({
     setLoading(false);
 
     if (res.ok && res.success) {
+      soundFx.playHarvest();
       setFeedback({ type: 'success', text: `+1 ${node.resource_type.toUpperCase()}` });
       const pId = Date.now();
       setFloatingParticles((prev) => [
@@ -105,6 +107,7 @@ export default function NodeCard({
         setFloatingParticles((prev) => prev.filter((p) => p.id !== pId));
       }, 1500);
     } else {
+      soundFx.playAlert();
       setFeedback({ type: 'error', text: res.message || 'RACE LOST (409)' });
     }
 
@@ -122,8 +125,10 @@ export default function NodeCard({
     setDeploying(false);
 
     if (res.success) {
+      soundFx.playDeploy();
       setFeedback({ type: 'success', text: 'DRILL DEPLOYED!' });
     } else {
+      soundFx.playAlert();
       setFeedback({ type: 'error', text: res.message || 'DEPLOY FAILED' });
     }
 
@@ -141,6 +146,7 @@ export default function NodeCard({
     setCollecting(false);
 
     if (res.success) {
+      soundFx.playTrade();
       setFeedback({ type: 'success', text: `+${res.data?.collectedUnits || machine.buffer_units} COLLECTED` });
       const pId = Date.now();
       setFloatingParticles((prev) => [

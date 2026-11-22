@@ -9,7 +9,14 @@ import {
   Wifi,
   AlertTriangle,
   CheckCircle2,
+  Volume2,
+  VolumeX,
+  FlaskConical,
+  Activity,
+  Keyboard,
+  Rocket,
 } from 'lucide-react';
+import { soundFx } from '../services/soundFx';
 
 export default function TopBar({
   currentPlayer,
@@ -17,6 +24,10 @@ export default function TopBar({
   onSwitchPlayer,
   onRegisterPlayer,
   onResetGame,
+  onOpenLab,
+  onOpenTelemetry,
+  onOpenHotkeys,
+  onTriggerSupplyDrop,
   serverStatus,
   latestVersion,
   activeAlert,
@@ -28,6 +39,12 @@ export default function TopBar({
   const [registerError, setRegisterError] = useState(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [isMuted, setIsMuted] = useState(soundFx.isMuted());
+
+  const handleToggleMute = () => {
+    const muted = soundFx.toggleMute();
+    setIsMuted(muted);
+  };
 
   const activePlayer = players.find((p) => p.id === currentPlayer) || {
     id: currentPlayer,
@@ -126,27 +143,78 @@ export default function TopBar({
           )}
         </div>
 
-        {/* Right Controls: Reset World & Connection Pill */}
-        <div className="flex items-center space-x-3 text-xs font-mono">
+        {/* Right Controls: Lab, Metrics, Supply Drop, Audio, Reset World & Telemetry */}
+        <div className="flex items-center space-x-2 text-xs font-mono">
+          {/* Concurrency Lab Button */}
+          <button
+            onClick={onOpenLab}
+            title="Open Live Concurrency Lab & Viva Demonstration Suite"
+            className="px-2 py-1 bg-cyan-950/70 hover:bg-cyan-900 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 rounded transition-all flex items-center space-x-1 text-[10px] font-bold shadow-sm active:scale-95"
+          >
+            <FlaskConical className="w-3 h-3 text-cyan-400" />
+            <span className="hidden sm:inline">LAB</span>
+          </button>
+
+          {/* Sector Metrics / Telemetry Button */}
+          <button
+            onClick={onOpenTelemetry}
+            title="Open Sector 9 Database & Ledger Telemetry"
+            className="px-2 py-1 bg-frontier-950 hover:bg-frontier-800 border border-frontier-700 hover:border-frontier-600 text-slate-300 rounded transition-all flex items-center space-x-1 text-[10px] font-bold shadow-sm active:scale-95"
+          >
+            <Activity className="w-3 h-3 text-purple-400" />
+            <span className="hidden sm:inline">INTEL</span>
+          </button>
+
+          {/* Supply Pod Drop Quick Trigger */}
+          <button
+            onClick={onTriggerSupplyDrop}
+            title="Dispatch Orbital Supply Pod Drop into Crater Basin (Grid B-2)"
+            className="px-2 py-1 bg-frontier-950 hover:bg-frontier-800 border border-purple-500/40 hover:border-purple-400 text-purple-300 rounded transition-all flex items-center space-x-1 text-[10px] font-bold shadow-sm active:scale-95"
+          >
+            <Rocket className="w-3 h-3 text-purple-400" />
+            <span className="hidden sm:inline">DROP</span>
+          </button>
+
+          {/* Audio Mute/Unmute Toggle */}
+          <button
+            onClick={handleToggleMute}
+            title={isMuted ? 'Unmute procedural tactical audio' : 'Mute procedural tactical audio'}
+            className="px-2 py-1 bg-frontier-950 hover:bg-frontier-800 border border-frontier-800 hover:border-frontier-700 text-slate-400 hover:text-cyan-300 rounded transition-colors text-[10px]"
+          >
+            {isMuted ? (
+              <VolumeX className="w-3.5 h-3.5 text-slate-500" />
+            ) : (
+              <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
+            )}
+          </button>
+
+          {/* Hotkeys Cheatsheet Button */}
+          <button
+            onClick={onOpenHotkeys}
+            title="Tactical Keyboard Controls [?]"
+            className="px-2 py-1 bg-frontier-950 hover:bg-frontier-800 border border-frontier-800 hover:border-frontier-700 text-slate-400 hover:text-cyan-300 rounded transition-colors text-[10px] font-bold"
+          >
+            <Keyboard className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+
           {/* Sector Reset Button */}
           <button
             onClick={() => setShowResetModal(true)}
             title="Reset Sector 9 resources, machines, and inventories"
-            className="px-2.5 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-500/50 hover:border-red-400 text-red-300 rounded transition-all flex items-center space-x-1.5 text-[10px] font-bold shadow-sm active:scale-95"
+            className="px-2 py-1 bg-red-950/60 hover:bg-red-900/80 border border-red-500/50 hover:border-red-400 text-red-300 rounded transition-all flex items-center space-x-1 text-[10px] font-bold shadow-sm active:scale-95"
           >
             <RotateCcw className="w-3 h-3 text-red-400" />
-            <span>RESET WORLD</span>
+            <span className="hidden sm:inline">RESET</span>
           </button>
 
           {/* Telemetry & DB Version */}
-          <div className="flex items-center space-x-2 bg-frontier-950 px-3 py-1.5 rounded border border-frontier-800 shadow-inner">
-            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-emerald-400 font-bold">
-              {serverStatus ? 'LIVE 28ms' : 'OFFLINE'}
+          <div className="flex items-center space-x-2 bg-frontier-950 px-2.5 py-1 rounded border border-frontier-800 shadow-inner">
+            <Wifi className="w-3 h-3 text-emerald-400" />
+            <span className="text-emerald-400 font-bold text-[10px]">
+              {serverStatus ? 'LIVE' : 'OFFLINE'}
             </span>
             <span className="text-slate-600">|</span>
-            <span className="text-slate-400">DB COMMIT:</span>
-            <span className="text-cyan-300 font-extrabold bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-500/40">
+            <span className="text-cyan-300 font-extrabold bg-cyan-950/80 px-1 py-0.5 rounded border border-cyan-500/40 text-[10px]">
               v{latestVersion || 1}
             </span>
           </div>

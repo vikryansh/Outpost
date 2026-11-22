@@ -4,6 +4,10 @@ import MapViewport from './components/MapViewport';
 import RadarMinimap from './components/RadarMinimap';
 import Sidebar from './components/Sidebar';
 import EventTicker from './components/EventTicker';
+import ConcurrencyLabModal from './components/ConcurrencyLabModal';
+import SectorTelemetryModal from './components/SectorTelemetryModal';
+import HotkeysModal from './components/HotkeysModal';
+import { soundFx } from './services/soundFx';
 import { socket } from './services/socket';
 import {
   getNodes,
@@ -22,6 +26,7 @@ import {
   getPlayers,
   registerPlayer,
   resetGameWorld,
+  triggerSupplyDrop,
 } from './services/api';
 
 export default function App() {
@@ -41,6 +46,10 @@ export default function App() {
   const [activeAlert, setActiveAlert] = useState(null);
   const [victoryState, setVictoryState] = useState(null);
   const [panPosition, setPanPosition] = useState({ x: -400, y: -200 }); // Default centered view
+  const [showLabModal, setShowLabModal] = useState(false);
+  const [showTelemetryModal, setShowTelemetryModal] = useState(false);
+  const [showHotkeysModal, setShowHotkeysModal] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState('crafting');
 
   // Initial Data Fetch
   const loadInitialData = async () => {
@@ -138,9 +147,18 @@ export default function App() {
     // 4. Victory Condition Broadcast
     socket.on('VICTORY_ACHIEVED', (payload) => {
       setVictoryState(payload);
+      soundFx.playVictory();
     });
 
-    // 5. Dynamic Player Enlistment Broadcast
+    // 5. Orbital Supply Pod Drop Broadcast
+    socket.on('SUPPLY_DROP_LANDED', (payload) => {
+      setActiveAlert(`🚨 ORBITAL SUPPLY POD LANDED at ${payload.gridCoord}!`);
+      soundFx.playAlert();
+      loadInitialData();
+      setTimeout(() => setActiveAlert(null), 9000);
+    });
+
+    // 6. Dynamic Player Enlistment Broadcast
     socket.on('PLAYER_REGISTERED', (newPlayer) => {
       setPlayers((prev) => {
         if (prev.some((p) => p.id === newPlayer.id)) return prev;
@@ -148,14 +166,15 @@ export default function App() {
       });
     });
 
-    // 6. Sector World Reset Broadcast
+    // 7. Sector World Reset Broadcast
     socket.on('GAME_RESET', () => {
       loadInitialData();
+      soundFx.playAlert();
       setActiveAlert('🔄 SECTOR RESET: Planet state restored to nominal baseline.');
       setTimeout(() => setActiveAlert(null), 8000);
     });
 
-    // 7. Global Event Ticker Feed
+    // 8. Global Event Ticker Feed
     socket.on('GLOBAL_TICKER_LOG', (log) => {
       setEvents((prev) => [...prev.slice(-49), log]);
       if (log.message.includes('🚨') || log.message.includes('Emergency') || log.message.includes('🏆')) {
@@ -174,6 +193,7 @@ export default function App() {
       socket.off('TRADE_COMPLETED');
       socket.off('TRADE_CANCELLED');
       socket.off('VICTORY_ACHIEVED');
+      socket.off('SUPPLY_DROP_LANDED');
       socket.off('PLAYER_REGISTERED');
       socket.off('GAME_RESET');
       socket.off('GLOBAL_TICKER_LOG');
@@ -297,6 +317,60 @@ export default function App() {
     }
   };
 
+  const handleTriggerSupplyDrop = async () => {
+    try {
+      soundFx.playAlert();
+      const res = await triggerSupplyDrop();
+      if (res.success) {
+        soundFx.playDeploy();
+        await loadInitialData();
+        setActiveAlert('🚀 ORBITAL SUPPLY POD DISPATCHED TO CRATER BASIN!');
+        setTimeout(() => setActiveAlert(null), 8000);
+      }
+      return res;
+    } catch (err) {
+      console.error('Failed to dispatch supply drop:', err);
+      return { error: 'DROP_FAILED', message: err.message };
+    }
+  };
+
+  // Tactical Hotkeys Listener
+  useEffect(() => {
+    const handleGlobalHotkeys = (e) => {
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === '1') {
+        setSidebarTab('crafting');
+        soundFx.playClick();
+      } else if (e.key === '2') {
+        setSidebarTab('trades');
+        soundFx.playClick();
+      } else if (e.key === '3') {
+        setSidebarTab('machines');
+        soundFx.playClick();
+      } else if (e.key === 'm' || e.key === 'M') {
+        soundFx.toggleMute();
+      } else if (e.key === 'c' || e.key === 'C') {
+        setShowLabModal((prev) => !prev);
+        soundFx.playClick();
+      } else if (e.key === 't' || e.key === 'T') {
+        setShowTelemetryModal((prev) => !prev);
+        soundFx.playClick();
+      } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        setShowHotkeysModal((prev) => !prev);
+        soundFx.playClick();
+      } else if (e.key === 'Escape') {
+        setShowLabModal(false);
+        setShowTelemetryModal(false);
+        setShowHotkeysModal(false);
+        setVictoryState(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalHotkeys);
+    return () => window.removeEventListener('keydown', handleGlobalHotkeys);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-screen bg-frontier-950 text-slate-100 overflow-hidden font-sans">
       {/* 1. Top Bar */}
@@ -306,9 +380,34 @@ export default function App() {
         onSwitchPlayer={setCurrentPlayer}
         onRegisterPlayer={handleRegisterPlayer}
         onResetGame={handleResetGame}
+        onOpenLab={() => setShowLabModal(true)}
+        onOpenTelemetry={() => setShowTelemetryModal(true)}
+        onOpenHotkeys={() => setShowHotkeysModal(true)}
+        onTriggerSupplyDrop={handleTriggerSupplyDrop}
         serverStatus={serverConnected}
         latestVersion={latestVersion}
         activeAlert={activeAlert}
+      />
+
+      {/* Live Concurrency Lab Modal */}
+      <ConcurrencyLabModal
+        isOpen={showLabModal}
+        onClose={() => setShowLabModal(false)}
+        nodes={nodes}
+        currentPlayer={currentPlayer}
+        onRefreshData={loadInitialData}
+      />
+
+      {/* Sector 9 Telemetry & Ledger Metrics Modal */}
+      <SectorTelemetryModal
+        isOpen={showTelemetryModal}
+        onClose={() => setShowTelemetryModal(false)}
+      />
+
+      {/* Hotkeys Cheatsheet Modal */}
+      <HotkeysModal
+        isOpen={showHotkeysModal}
+        onClose={() => setShowHotkeysModal(false)}
       />
 
       {/* Victory Celebration Modal */}
@@ -369,6 +468,8 @@ export default function App() {
           onAcceptTrade={handleAcceptTrade}
           onCancelTrade={handleCancelTrade}
           onCollectMachine={handleCollectMachine}
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
         />
       </div>
 

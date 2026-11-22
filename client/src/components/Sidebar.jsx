@@ -14,8 +14,12 @@ export default function Sidebar({
   onAcceptTrade,
   onCancelTrade,
   onCollectMachine,
+  activeTab: controlledActiveTab,
+  onTabChange,
 }) {
-  const [activeTab, setActiveTab] = useState('crafting');
+  const [internalActiveTab, setInternalActiveTab] = useState('crafting');
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : internalActiveTab;
+  const setActiveTab = onTabChange || setInternalActiveTab;
 
   const playerMachines = machines.filter((m) => m.player_id === currentPlayer);
 

@@ -41,6 +41,47 @@ export default function MapViewport({
     return () => el.removeEventListener('wheel', handleWheel);
   }, []);
 
+  // Keyboard panning (WASD / Arrows) and Spacebar centering
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't intercept if user is typing in form inputs
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      const PAN_STEP = 75;
+      const viewportW = window.innerWidth - 390;
+      const viewportH = window.innerHeight - 168;
+      const scaledWidth = MAP_WIDTH * zoomLevel;
+      const scaledHeight = MAP_HEIGHT * zoomLevel;
+      const minX = Math.min(0, -(scaledWidth - viewportW));
+      const minY = Math.min(0, -(scaledHeight - viewportH));
+
+      if (e.code === 'KeyW' || e.code === 'ArrowUp') {
+        e.preventDefault();
+        setPanPosition((prev) => ({ ...prev, y: Math.min(100, prev.y + PAN_STEP) }));
+      } else if (e.code === 'KeyS' || e.code === 'ArrowDown') {
+        e.preventDefault();
+        setPanPosition((prev) => ({ ...prev, y: Math.max(minY - 100, prev.y - PAN_STEP) }));
+      } else if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        e.preventDefault();
+        setPanPosition((prev) => ({ ...prev, x: Math.min(100, prev.x + PAN_STEP) }));
+      } else if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        e.preventDefault();
+        setPanPosition((prev) => ({ ...prev, x: Math.max(minX - 100, prev.x - PAN_STEP) }));
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        // Center on Crater Basin / Supply Pod at (1380, 720)
+        const targetX = -(1380 * zoomLevel - viewportW / 2);
+        const targetY = -(720 * zoomLevel - viewportH / 2);
+        const clampedX = Math.min(100, Math.max(minX - 100, targetX));
+        const clampedY = Math.min(100, Math.max(minY - 100, targetY));
+        setPanPosition({ x: clampedX, y: clampedY });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [zoomLevel]);
+
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     isDragging.current = true;

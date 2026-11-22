@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Hammer, Check, X, Sparkles, AlertTriangle } from 'lucide-react';
+import { soundFx } from '../services/soundFx';
 
 export default function CraftingWorkbench({ inventory, recipes, onCraft }) {
   const [craftingItem, setCraftingItem] = useState(null);
@@ -15,7 +16,10 @@ export default function CraftingWorkbench({ inventory, recipes, onCraft }) {
     setErrorMsg(null);
     const res = await onCraft(itemName);
     setCraftingItem(null);
-    if (res && !res.success) {
+    if (res && res.success) {
+      soundFx.playCraft();
+    } else if (res && !res.success) {
+      soundFx.playAlert();
       setErrorMsg(res.message || 'Craft failed. Check your inventory.');
     }
   };
