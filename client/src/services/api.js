@@ -93,3 +93,24 @@ export async function getEvents() {
   const res = await fetch(`${API_BASE}/api/events`);
   return res.json();
 }
+
+export async function getPlayers() {
+  const res = await fetch(`${API_BASE}/api/players`);
+  return res.json();
+}
+
+export async function registerPlayer(username, role = 'Pioneer') {
+  const res = await fetch(`${API_BASE}/api/players`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, role }),
+  });
+  return res.json();
+}
+
+export async function resetGameWorld() {
+  const res = await fetch(`${API_BASE}/api/game/reset`, {
+    method: 'POST',
+  });
+  return res.json();
+}

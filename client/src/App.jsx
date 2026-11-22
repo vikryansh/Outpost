@@ -19,10 +19,17 @@ import {
   deployMachine,
   collectMachineBuffer,
   getEvents,
+  getPlayers,
+  registerPlayer,
+  resetGameWorld,
 } from './services/api';
 
 export default function App() {
   const [currentPlayer, setCurrentPlayer] = useState(2); // 2 = Hansika (Pioneer), 1 = Vikryansh (Industrialist)
+  const [players, setPlayers] = useState([
+    { id: 2, username: 'Hansika', role: 'Pioneer' },
+    { id: 1, username: 'Vikryansh', role: 'Industrialist' },
+  ]);
   const [nodes, setNodes] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [recipes, setRecipes] = useState({});
@@ -38,13 +45,14 @@ export default function App() {
   // Initial Data Fetch
   const loadInitialData = async () => {
     try {
-      const [nodesData, invData, recData, tradesData, machinesData, eventsData] = await Promise.all([
+      const [nodesData, invData, recData, tradesData, machinesData, eventsData, playersData] = await Promise.all([
         getNodes(),
         getInventory(currentPlayer),
         getRecipes(),
         getTrades(),
         getMachines(),
         getEvents(),
+        getPlayers(),
       ]);
 
       setNodes(nodesData);
@@ -53,6 +61,9 @@ export default function App() {
       setTrades(tradesData);
       setMachines(machinesData);
       setEvents(eventsData);
+      if (Array.isArray(playersData) && playersData.length > 0) {
+        setPlayers(playersData);
+      }
 
       const maxVer = Math.max(...nodesData.map((n) => n.version || 1), 1);
       setLatestVersion(maxVer);
@@ -129,7 +140,22 @@ export default function App() {
       setVictoryState(payload);
     });
 
-    // 5. Global Event Ticker Feed
+    // 5. Dynamic Player Enlistment Broadcast
+    socket.on('PLAYER_REGISTERED', (newPlayer) => {
+      setPlayers((prev) => {
+        if (prev.some((p) => p.id === newPlayer.id)) return prev;
+        return [...prev, newPlayer];
+      });
+    });
+
+    // 6. Sector World Reset Broadcast
+    socket.on('GAME_RESET', () => {
+      loadInitialData();
+      setActiveAlert('🔄 SECTOR RESET: Planet state restored to nominal baseline.');
+      setTimeout(() => setActiveAlert(null), 8000);
+    });
+
+    // 7. Global Event Ticker Feed
     socket.on('GLOBAL_TICKER_LOG', (log) => {
       setEvents((prev) => [...prev.slice(-49), log]);
       if (log.message.includes('🚨') || log.message.includes('Emergency') || log.message.includes('🏆')) {
@@ -148,6 +174,8 @@ export default function App() {
       socket.off('TRADE_COMPLETED');
       socket.off('TRADE_CANCELLED');
       socket.off('VICTORY_ACHIEVED');
+      socket.off('PLAYER_REGISTERED');
+      socket.off('GAME_RESET');
       socket.off('GLOBAL_TICKER_LOG');
     };
   }, [currentPlayer]);
@@ -238,12 +266,46 @@ export default function App() {
     return res;
   };
 
+  const handleRegisterPlayer = async (username, role) => {
+    try {
+      const res = await registerPlayer(username, role);
+      if (res.error) {
+        return res;
+      }
+      if (res.player) {
+        setPlayers((prev) => {
+          if (prev.some((p) => p.id === res.player.id)) return prev;
+          return [...prev, res.player];
+        });
+        setCurrentPlayer(res.player.id);
+      }
+      return res;
+    } catch (err) {
+      console.error('Failed to register pioneer:', err);
+      return { error: 'REGISTRATION_FAILED', message: err.message };
+    }
+  };
+
+  const handleResetGame = async () => {
+    try {
+      const res = await resetGameWorld();
+      await loadInitialData();
+      return res;
+    } catch (err) {
+      console.error('Failed to reset game:', err);
+      return { error: 'RESET_FAILED', message: err.message };
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-screen bg-frontier-950 text-slate-100 overflow-hidden font-sans">
       {/* 1. Top Bar */}
       <TopBar
         currentPlayer={currentPlayer}
+        players={players}
         onSwitchPlayer={setCurrentPlayer}
+        onRegisterPlayer={handleRegisterPlayer}
+        onResetGame={handleResetGame}
         serverStatus={serverConnected}
         latestVersion={latestVersion}
         activeAlert={activeAlert}
