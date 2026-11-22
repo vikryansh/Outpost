@@ -205,7 +205,96 @@ async function acceptStandingOffer(buyerPlayerId, tradeId, simulateFault = false
   }
 }
 
+/**
+ * Cancels an open standing trade offer, returning escrowed items to creator.
+ */
+async function cancelStandingOffer(tradeId, creatorPlayerId, postCommitEmitter = null) {
+  const client = await getClient();
+
+  try {
+    await client.query('BEGIN');
+
+    // 1. Lock trade row
+    const tradeRes = await client.query(
+      `SELECT id, creator_player_id, offered_item, offered_quantity, demanded_item, demanded_quantity, status
+       FROM standing_trades
+       WHERE id = $1 FOR UPDATE;`,
+      [tradeId]
+    );
+
+    if (tradeRes.rowCount === 0) {
+      const err = new Error(`Trade #${tradeId} does not exist`);
+      err.status = 404;
+      err.error = 'TRADE_NOT_FOUND';
+      throw err;
+    }
+
+    const trade = tradeRes.rows[0];
+
+    if (trade.status !== 'OPEN') {
+      const err = new Error(`Trade #${tradeId} is no longer OPEN (current status: ${trade.status})`);
+      err.status = 409;
+      err.error = 'TRADE_NOT_OPEN';
+      throw err;
+    }
+
+    if (trade.creator_player_id !== creatorPlayerId) {
+      const err = new Error(`Unauthorized: Only creator Player #${trade.creator_player_id} can cancel Trade #${tradeId}`);
+      err.status = 403;
+      err.error = 'FORBIDDEN';
+      throw err;
+    }
+
+    // 2. Mark trade as CANCELLED
+    await client.query(
+      `UPDATE standing_trades
+       SET status = 'CANCELLED', completed_at = NOW()
+       WHERE id = $1;`,
+      [tradeId]
+    );
+
+    // 3. Refund escrowed items to creator's inventory
+    await client.query(
+      `INSERT INTO inventories (player_id, item_type, quantity, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (player_id, item_type)
+       DO UPDATE SET quantity = inventories.quantity + $3, updated_at = NOW();`,
+      [creatorPlayerId, trade.offered_item, trade.offered_quantity]
+    );
+
+    // 4. Log event
+    await client.query(
+      `INSERT INTO event_logs (player_id, event_type, details)
+       VALUES ($1, 'TRADE_CANCEL', $2);`,
+      [creatorPlayerId, JSON.stringify({ tradeId, refundedItem: trade.offered_item, quantity: trade.offered_quantity })]
+    );
+
+    await client.query('COMMIT');
+
+    if (postCommitEmitter) {
+      postCommitEmitter('TRADE_CANCELLED', {
+        tradeId,
+        creatorPlayerId,
+        refundedItem: trade.offered_item,
+        quantity: trade.offered_quantity,
+      });
+    }
+
+    return {
+      success: true,
+      status: 200,
+      data: { tradeId, status: 'CANCELLED' },
+    };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 module.exports = {
   createStandingOffer,
   acceptStandingOffer,
+  cancelStandingOffer,
 };

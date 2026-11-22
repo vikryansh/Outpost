@@ -10,7 +10,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const { pool, query } = require('./db');
 const { harvestNode } = require('./services/harvestService');
 const { craftItem, RECIPES } = require('./services/craftService');
-const { createStandingOffer, acceptStandingOffer } = require('./services/tradeService');
+const { createStandingOffer, acceptStandingOffer, cancelStandingOffer } = require('./services/tradeService');
 const {
   deployMachine,
   collectMachineBuffer,
@@ -114,6 +114,18 @@ app.post('/api/craft', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
 
+    if (item === 'surveyors_beacon') {
+      emitSocketEvent('VICTORY_ACHIEVED', {
+        playerId: parseInt(playerId || 1, 10),
+        message: `🏆 VICTORY! Player #${playerId || 1} assembled the Surveyor's Beacon! Sector 9 Frontier Secured!`,
+        timestamp: new Date().toISOString(),
+      });
+      emitSocketEvent('GLOBAL_TICKER_LOG', {
+        message: `🏆 VICTORY! Player #${playerId || 1} assembled the Surveyor's Beacon! Sector 9 Frontier Secured!`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'CRAFT_ERROR', message: err.message });
@@ -185,6 +197,31 @@ app.post('/api/trades/:id/accept', async (req, res) => {
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'ACCEPT_ERROR', message: err.message });
+  }
+});
+
+app.post('/api/trades/:id/cancel', async (req, res) => {
+  const tradeId = parseInt(req.params.id, 10);
+  const { creatorPlayerId } = req.body;
+
+  try {
+    const result = await cancelStandingOffer(
+      tradeId,
+      parseInt(creatorPlayerId, 10),
+      emitSocketEvent
+    );
+    if (!result.success) {
+      return res.status(result.status).json(result);
+    }
+
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `↩️ Trade #${tradeId} cancelled by Player #${creatorPlayerId} (Escrow Refunded)`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(result.status).json(result);
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.error || 'CANCEL_ERROR', message: err.message });
   }
 });
 
