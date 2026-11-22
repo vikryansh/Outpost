@@ -78,6 +78,88 @@ app.post('/api/nodes/:id/harvest', async (req, res) => {
   }
 });
 
+// 3. Player Registration & Profiles
+app.get('/api/players', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT id, username, role, outpost_tier, credits, created_at FROM players ORDER BY id ASC;'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'DB_ERROR', message: err.message });
+  }
+});
+
+app.post('/api/players', async (req, res) => {
+  const { username, role } = req.body;
+  if (!username || !username.trim()) {
+    return res.status(400).json({ error: 'MISSING_PARAM', message: 'Username is required.' });
+  }
+
+  const cleanUsername = username.trim();
+  const cleanRole = role && role.trim() ? role.trim() : 'Pioneer';
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Check if username already exists
+    const checkUser = await client.query('SELECT id FROM players WHERE username = $1;', [cleanUsername]);
+    if (checkUser.rowCount > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'USERNAME_TAKEN',
+        message: `Pioneer callsign "${cleanUsername}" is already registered.`,
+      });
+    }
+
+    // Insert new player
+    const playerRes = await client.query(
+      `INSERT INTO players (username, role, outpost_tier, credits)
+       VALUES ($1, $2, 1, 50)
+       RETURNING id, username, role, outpost_tier, credits, created_at;`,
+      [cleanUsername, cleanRole]
+    );
+    const newPlayer = playerRes.rows[0];
+
+    // Seed starter inventory
+    const starterItems = [
+      ['timber', 6],
+      ['iron_ore', 4],
+      ['copper_wire', 2],
+    ];
+    for (const [item, qty] of starterItems) {
+      await client.query(
+        `INSERT INTO inventories (player_id, item_type, quantity)
+         VALUES ($1, $2, $3);`,
+        [newPlayer.id, item, qty]
+      );
+    }
+
+    // Log registration event
+    await client.query(
+      `INSERT INTO event_logs (player_id, event_type, details)
+       VALUES ($1, 'PLAYER_REGISTER', $2);`,
+      [newPlayer.id, JSON.stringify({ username: cleanUsername, role: cleanRole })]
+    );
+
+    await client.query('COMMIT');
+
+    emitSocketEvent('PLAYER_REGISTERED', newPlayer);
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `🚀 New Pioneer enlisted: ${newPlayer.username} (${newPlayer.role}) joined Sector 9`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(201).json({ success: true, data: newPlayer });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'REGISTRATION_ERROR', message: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // 3. Get Player Inventory
 app.get('/api/players/:id/inventory', async (req, res) => {
   const playerId = parseInt(req.params.id, 10);
@@ -89,6 +171,68 @@ app.get('/api/players/:id/inventory', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'DB_ERROR', message: err.message });
+  }
+});
+
+// 3.1. Game / Sector World Reset Endpoint
+app.post('/api/game/reset', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Reset all resource nodes to full max_capacity and version 1
+    await client.query(`
+      UPDATE resource_nodes
+      SET remaining_units = max_capacity,
+          version = 1,
+          status = 'ACTIVE',
+          updated_at = NOW();
+    `);
+
+    // 2. Remove all active machines
+    await client.query(`DELETE FROM machines;`);
+
+    // 3. Cancel all open standing trades
+    await client.query(`UPDATE standing_trades SET status = 'CANCELLED', completed_at = NOW() WHERE status = 'OPEN';`);
+
+    // 4. Reset starter inventories for players
+    await client.query(`
+      DELETE FROM inventories;
+      INSERT INTO inventories (player_id, item_type, quantity)
+      VALUES
+        (1, 'timber', 6),
+        (1, 'iron_ore', 4),
+        (1, 'copper_wire', 2),
+        (2, 'timber', 8),
+        (2, 'copper_ore', 6),
+        (2, 'iron_plate', 2)
+      ON CONFLICT (player_id, item_type) DO UPDATE SET quantity = EXCLUDED.quantity;
+    `);
+
+    // 5. Append reset event log
+    await client.query(`
+      INSERT INTO event_logs (player_id, event_type, details)
+      VALUES (1, 'GAME_RESET', '{"message": "Authoritative sector reset executed. All nodes and inventories restored to factory baseline."}');
+    `);
+
+    await client.query('COMMIT');
+
+    // Broadcast GAME_RESET to all connected sockets
+    emitSocketEvent('GAME_RESET', {
+      timestamp: new Date().toISOString(),
+      message: 'Sector 9 planetary state has been authoritatively reset to baseline.',
+    });
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: '🔄 SECTOR RESET: Planet state, resource reserves, and inventory ledgers restored to nominal baseline.',
+      timestamp: new Date().toISOString(),
+    });
+
+    res.json({ success: true, message: 'Game world and resource sectors reset successfully.' });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: 'RESET_ERROR', message: err.message });
+  } finally {
+    client.release();
   }
 });
 
