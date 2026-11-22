@@ -88,11 +88,11 @@ export default function MapViewport({
         {/* West Forest Canopy Glow */}
         <div className="absolute top-[100px] left-[150px] w-[600px] h-[600px] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none" />
         {/* Central Landing Crater Glow */}
-        <div className="absolute top-[450px] left-[1050px] w-[500px] h-[500px] bg-amber-500/15 rounded-full blur-[130px] pointer-events-none" />
+        <div className="absolute top-[520px] left-[1180px] w-[500px] h-[500px] bg-amber-500/15 rounded-full blur-[130px] pointer-events-none" />
         {/* Northeast Volcanic Magma Glow */}
         <div className="absolute top-[100px] left-[1500px] w-[700px] h-[500px] bg-orange-600/20 rounded-full blur-[150px] pointer-events-none" />
         {/* Southeast Crystal Geode Cave Glow */}
-        <div className="absolute top-[850px] left-[1650px] w-[600px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-[950px] left-[1750px] w-[600px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
 
         {/* 5. Interactive Resource Nodes with Ground Dioramas & Sleek Tactical Pins */}
         {nodes.map((node) => {

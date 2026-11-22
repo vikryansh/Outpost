@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
-import { Pickaxe, Wrench, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
+import { Pickaxe, Wrench, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
-  ForestBiome,
-  IronMineBiome,
-  CopperMineBiome,
-  CrystalGeodeBiome,
-  OrbitalPodBiome,
+  TacticalBeaconGround,
+  OrbitalPodModel,
   DrillRigGraphic,
 } from './BiomeGraphics';
 
@@ -15,50 +12,55 @@ const BIOME_THEMES = {
     glow: 'shadow-neon-emerald',
     text: 'text-emerald-300',
     barFill: 'bg-emerald-400',
-    reticle: 'border-emerald-400/50',
-    Component: ForestBiome,
-    shortName: 'Timber Grove',
+    strokeColor: '#10b981',
+    glowColor: '#34d399',
+    shortName: 'Ancient Timber Grove',
     icon: '🌲',
+    isSpecialModel: false,
   },
   iron_ore: {
     border: 'border-amber-500/70',
     glow: 'shadow-neon-amber',
     text: 'text-amber-300',
     barFill: 'bg-amber-400',
-    reticle: 'border-amber-400/50',
-    Component: IronMineBiome,
-    shortName: 'Iron Vein',
+    strokeColor: '#f59e0b',
+    glowColor: '#fbbf24',
+    shortName: 'Iron Ridge Vein',
     icon: '⛏️',
+    isSpecialModel: false,
   },
   copper_ore: {
     border: 'border-cyan-500/70',
     glow: 'shadow-neon-cyan',
     text: 'text-cyan-300',
     barFill: 'bg-cyan-400',
-    reticle: 'border-cyan-400/50',
-    Component: CopperMineBiome,
-    shortName: 'Copper Ridge',
+    strokeColor: '#06b6d4',
+    glowColor: '#67e8f9',
+    shortName: 'Copper Ridge Deposit',
     icon: '⚡',
+    isSpecialModel: false,
   },
   energy_crystal: {
     border: 'border-purple-500/70',
     glow: 'shadow-neon-purple',
     text: 'text-purple-300',
     barFill: 'bg-purple-400',
-    reticle: 'border-purple-400/50',
-    Component: CrystalGeodeBiome,
-    shortName: 'Crystal Geode',
+    strokeColor: '#a855f7',
+    glowColor: '#c084fc',
+    shortName: 'Crystal Geode Prime',
     icon: '💎',
+    isSpecialModel: false,
   },
   circuit_board: {
     border: 'border-yellow-400/80',
     glow: 'shadow-neon-gold',
     text: 'text-yellow-300',
     barFill: 'bg-yellow-400',
-    reticle: 'border-yellow-400/60',
-    Component: OrbitalPodBiome,
-    shortName: 'Supply Pod',
+    strokeColor: '#eab308',
+    glowColor: '#facc15',
+    shortName: 'Orbital Supply Pod',
     icon: '📦',
+    isSpecialModel: true,
   },
 };
 
@@ -68,7 +70,6 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
   const [floatingParticles, setFloatingParticles] = useState([]);
 
   const theme = BIOME_THEMES[node.resource_type] || BIOME_THEMES.timber;
-  const BiomeGraphic = theme.Component;
   const isDepleted = node.remaining_units <= 0;
 
   const handleHarvestClick = async (e) => {
@@ -83,9 +84,11 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
 
     if (res.ok && res.success) {
       setFeedback({ type: 'success', text: `+1 ${node.resource_type.toUpperCase()}` });
-      // Add floating particle
       const pId = Date.now();
-      setFloatingParticles((prev) => [...prev, { id: pId, text: `+1 ${node.resource_type.replace('_', ' ').toUpperCase()}` }]);
+      setFloatingParticles((prev) => [
+        ...prev,
+        { id: pId, text: `+1 ${node.resource_type.replace('_', ' ').toUpperCase()}` },
+      ]);
       setTimeout(() => {
         setFloatingParticles((prev) => prev.filter((p) => p.id !== pId));
       }, 1500);
@@ -106,19 +109,19 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
       }}
       className="flex flex-col items-center select-none z-20 group pointer-events-auto"
     >
-      {/* Floating Gain Particle Animations */}
+      {/* Floating Gain Particle Animation */}
       {floatingParticles.map((p) => (
         <div
           key={p.id}
-          className="absolute -top-16 font-mono font-extrabold text-xs text-emerald-300 bg-frontier-950/90 px-2 py-0.5 rounded border border-emerald-400 shadow-neon-emerald animate-bounce z-40 pointer-events-none"
+          className="absolute -top-16 font-mono font-extrabold text-xs text-emerald-300 bg-frontier-950/95 px-2.5 py-0.5 rounded border border-emerald-400 shadow-neon-emerald animate-bounce z-40 pointer-events-none"
         >
           {p.text}
         </div>
       ))}
 
-      {/* 1. Sleek Compact Tactical Pin (Floating Above Ground Diorama) */}
+      {/* 1. Sleek Compact Tactical HUD Pin (Floating Above Entity) */}
       <div
-        className={`w-48 bg-frontier-950/90 border backdrop-blur-md rounded-md p-2 shadow-2xl transition-all duration-200 z-30 ${
+        className={`w-44 bg-frontier-950/90 border backdrop-blur-md rounded-md p-1.5 shadow-2xl transition-all duration-200 z-30 ${
           theme.border
         } group-hover:scale-105 group-hover:bg-frontier-900 ${
           feedback?.type === 'error' ? 'animate-shake border-red-500 bg-red-950/95' : ''
@@ -166,7 +169,7 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Action Extract Button */}
         <button
           onClick={handleHarvestClick}
           disabled={loading || isDepleted}
@@ -189,7 +192,11 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
                 : 'bg-red-500/20 text-red-300 border border-red-500/50'
             }`}
           >
-            {feedback.type === 'success' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-2.5 h-2.5" />
+            ) : (
+              <AlertTriangle className="w-2.5 h-2.5" />
+            )}
             <span>{feedback.text}</span>
           </div>
         )}
@@ -198,22 +205,28 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
       {/* 2. Delicate Holographic Energy Pointer Stalk */}
       <div className="w-[1.5px] h-3 bg-gradient-to-b from-cyan-400 to-transparent pointer-events-none" />
 
-      {/* 3. Interactive Illustrated Ground Entity (Clickable World Diorama) */}
+      {/* 3. Interactive Ground Entity (Clickable Ground Target) */}
       <div
         onClick={handleHarvestClick}
         title={`Click to extract from ${node.name}`}
         className="relative cursor-pointer flex items-center justify-center -mt-2 group/diorama"
       >
-        {/* Subtle ground tactical reticle on hover */}
-        <div
-          className={`absolute w-36 h-20 rounded-full border border-dashed transition-all duration-300 pointer-events-none opacity-0 group-hover/diorama:opacity-100 ${theme.reticle} animate-pulse`}
-        />
-
+        {/* If MK-1 Drill is deployed */}
         {machine && (
           <DrillRigGraphic storedUnits={machine.buffer_units} capacity={machine.buffer_capacity} />
         )}
 
-        <BiomeGraphic remainingUnits={node.remaining_units} maxCapacity={node.max_capacity} />
+        {/* Render Model: Pod for Supply Pod, Holographic Tactical Ground Beacon for Veins */}
+        {theme.isSpecialModel ? (
+          <OrbitalPodModel remainingUnits={node.remaining_units} />
+        ) : (
+          <TacticalBeaconGround
+            theme={theme}
+            remainingUnits={node.remaining_units}
+            maxCapacity={node.max_capacity}
+            isDepleted={isDepleted}
+          />
+        )}
       </div>
     </div>
   );

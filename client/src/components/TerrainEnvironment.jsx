@@ -91,52 +91,52 @@ export default function TerrainEnvironment() {
         {/* ================================================================= */}
         {/* 2. INDUSTRIAL PIPELINES & GROUND CONDUITS                         */}
         {/* ================================================================= */}
-        <g id="industrial-pipes" opacity="0.8">
-          {/* Main Pipeline from Iron Ridge (1080, 420) down towards Central Hub */}
+        <g id="industrial-pipes" opacity="0.75">
+          {/* Main Conveyor Line from Iron Ridge #1 (1060, 440) along ridge edge */}
           <path
-            d="M1080,440 L1080,560 L1200,560 L1200,640"
+            d="M1060,460 L1060,540 L1180,540 L1220,620"
             fill="none"
             stroke="#1e293b"
-            strokeWidth="8"
+            strokeWidth="7"
             strokeLinecap="round"
           />
           <path
-            d="M1080,440 L1080,560 L1200,560 L1200,640"
+            d="M1060,460 L1060,540 L1180,540 L1220,620"
             fill="none"
             stroke="#06b6d4"
             strokeWidth="2.5"
             strokeDasharray="14 6"
             className="animate-pulse"
           />
-          <circle cx="1080" cy="560" r="7" fill="#0f172a" stroke="#06b6d4" strokeWidth="2" />
-          <circle cx="1200" cy="560" r="7" fill="#0f172a" stroke="#06b6d4" strokeWidth="2" />
+          <circle cx="1060" cy="540" r="6" fill="#0f172a" stroke="#06b6d4" strokeWidth="2" />
+          <circle cx="1180" cy="540" r="6" fill="#0f172a" stroke="#06b6d4" strokeWidth="2" />
 
-          {/* Pipeline from Central Landing Hub (1260, 650) to Iron Ridge #2 (1420, 920) */}
+          {/* Pipeline from Iron Ridge #2 (1440, 950) along Southern Track */}
           <path
-            d="M1280,680 L1350,760 L1420,880"
+            d="M1440,920 L1520,860 L1680,860 L1780,940"
             fill="none"
             stroke="#1e293b"
             strokeWidth="7"
             strokeLinecap="round"
           />
           <path
-            d="M1280,680 L1350,760 L1420,880"
+            d="M1440,920 L1520,860 L1680,860 L1780,940"
             fill="none"
             stroke="#f59e0b"
             strokeWidth="2"
             strokeDasharray="10 5"
           />
 
-          {/* Eastern Pipeline from Copper Ridge (1760, 380) */}
+          {/* Eastern Pipeline from Copper Ridge (1750, 360) towards central junction */}
           <path
-            d="M1760,410 L1660,520 L1540,520 L1450,600"
+            d="M1750,380 L1680,480 L1580,480"
             fill="none"
             stroke="#1e293b"
             strokeWidth="7"
             strokeLinecap="round"
           />
           <path
-            d="M1760,410 L1660,520 L1540,520 L1450,600"
+            d="M1750,380 L1680,480 L1580,480"
             fill="none"
             stroke="#06b6d4"
             strokeWidth="2"
@@ -181,18 +181,18 @@ export default function TerrainEnvironment() {
         <g id="tactical-markings" opacity="0.6">
           {/* Target Reticle around Central Crater Landing Zone */}
           <circle
-            cx="1260"
-            cy="650"
-            r="120"
+            cx="1380"
+            cy="720"
+            r="110"
             fill="none"
             stroke="#f59e0b"
             strokeWidth="1"
             strokeDasharray="8 8"
           />
           <circle
-            cx="1260"
-            cy="650"
-            r="160"
+            cx="1380"
+            cy="720"
+            r="150"
             fill="none"
             stroke="#f59e0b"
             strokeWidth="0.8"
@@ -200,27 +200,27 @@ export default function TerrainEnvironment() {
             strokeDasharray="16 16"
           />
           {/* Reticle Tick Crosshairs */}
-          <line x1="1260" y1="510" x2="1260" y2="525" stroke="#f59e0b" strokeWidth="2" />
-          <line x1="1260" y1="775" x2="1260" y2="790" stroke="#f59e0b" strokeWidth="2" />
-          <line x1="1120" y1="650" x2="1135" y2="650" stroke="#f59e0b" strokeWidth="2" />
-          <line x1="1385" y1="650" x2="1400" y2="650" stroke="#f59e0b" strokeWidth="2" />
+          <line x1="1380" y1="590" x2="1380" y2="605" stroke="#f59e0b" strokeWidth="2" />
+          <line x1="1380" y1="835" x2="1380" y2="850" stroke="#f59e0b" strokeWidth="2" />
+          <line x1="1250" y1="720" x2="1265" y2="720" stroke="#f59e0b" strokeWidth="2" />
+          <line x1="1495" y1="720" x2="1510" y2="720" stroke="#f59e0b" strokeWidth="2" />
 
           {/* Contour Sector Coordinates */}
-          <text x="1275" y="525" fill="#f59e0b" fontSize="10" fontFamily="monospace" fontWeight="bold">
+          <text x="1395" y="605" fill="#f59e0b" fontSize="10" fontFamily="monospace" fontWeight="bold">
             LZ-ALPHA // IMPACT DROP ZONE [B-2]
           </text>
 
           {/* Southeast Cavern Entrance Marker */}
           <circle
-            cx="1850"
-            cy="1150"
-            r="110"
+            cx="1950"
+            cy="1180"
+            r="100"
             fill="none"
             stroke="#c084fc"
             strokeWidth="1"
             strokeDasharray="6 6"
           />
-          <text x="1740" y="1025" fill="#c084fc" fontSize="10" fontFamily="monospace" fontWeight="bold">
+          <text x="1840" y="1065" fill="#c084fc" fontSize="10" fontFamily="monospace" fontWeight="bold">
             SUBTERRANEAN CHASM PRIME // ENERGY ANOMALY [C-4]
           </text>
         </g>

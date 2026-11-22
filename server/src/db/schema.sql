@@ -121,14 +121,14 @@ ON CONFLICT (id) DO NOTHING;
 -- Seed Diverse Planetary Resource Nodes (Coordinates match the 2500x1400 viewport)
 INSERT INTO resource_nodes (id, name, resource_type, max_capacity, remaining_units, version, coord_x, coord_y, grid_sector, status)
 VALUES
-    (1, 'Ancient Timber Grove Alpha', 'timber', 10, 10, 1, 450, 320, 'A-1', 'ACTIVE'),
-    (2, 'Deep Timber Grove Beta', 'timber', 10, 10, 1, 580, 760, 'A-2', 'ACTIVE'),
-    (3, 'Iron Ridge Vein #1', 'iron_ore', 10, 10, 1, 1080, 420, 'B-2', 'ACTIVE'),
-    (4, 'Iron Ridge Vein #2', 'iron_ore', 10, 10, 1, 1420, 920, 'B-3', 'ACTIVE'),
-    (5, 'Copper Ridge Deposit Alpha', 'copper_ore', 10, 10, 1, 1760, 380, 'C-1', 'ACTIVE'),
-    (6, 'Copper Ridge Deposit Beta', 'copper_ore', 10, 10, 1, 2080, 680, 'C-3', 'ACTIVE'),
-    (7, 'Subterranean Crystal Geode Prime', 'energy_crystal', 5, 5, 1, 1850, 1150, 'C-4', 'ACTIVE'),
-    (8, 'Contested Orbital Supply Pod Alpha', 'circuit_board', 1, 1, 1, 1260, 650, 'B-2', 'ACTIVE')
+    (1, 'Ancient Timber Grove Alpha', 'timber', 10, 10, 1, 420, 340, 'A-1', 'ACTIVE'),
+    (2, 'Deep Timber Grove Beta', 'timber', 10, 10, 1, 540, 760, 'A-2', 'ACTIVE'),
+    (3, 'Iron Ridge Vein #1', 'iron_ore', 10, 10, 1, 1060, 440, 'B-2', 'ACTIVE'),
+    (4, 'Iron Ridge Vein #2', 'iron_ore', 10, 10, 1, 1440, 950, 'B-3', 'ACTIVE'),
+    (5, 'Copper Ridge Deposit Alpha', 'copper_ore', 10, 10, 1, 1750, 360, 'C-1', 'ACTIVE'),
+    (6, 'Copper Ridge Deposit Beta', 'copper_ore', 10, 10, 1, 2060, 620, 'C-3', 'ACTIVE'),
+    (7, 'Subterranean Crystal Geode Prime', 'energy_crystal', 5, 5, 1, 1950, 1180, 'C-4', 'ACTIVE'),
+    (8, 'Contested Orbital Supply Pod Alpha', 'circuit_board', 1, 1, 1, 1380, 720, 'B-2', 'ACTIVE')
 ON CONFLICT (id) DO UPDATE SET
     coord_x = EXCLUDED.coord_x,
     coord_y = EXCLUDED.coord_y,
