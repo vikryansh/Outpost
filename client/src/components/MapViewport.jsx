@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from 'lucide-react';
 import NodeCard from './NodeCard';
 import TerrainEnvironment from './TerrainEnvironment';
 
@@ -8,8 +9,11 @@ const MAP_HEIGHT = 1400;
 export default function MapViewport({
   nodes,
   machines,
+  inventory,
+  currentPlayer,
   onHarvest,
   onDeployMachine,
+  onCollectMachine,
   panPosition,
   setPanPosition,
 }) {
@@ -17,6 +21,25 @@ export default function MapViewport({
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1.0);
+
+  const hasDrillInInventory = (inventory || []).some(
+    (i) => i.item_type === 'mk1_drill' && i.quantity > 0
+  );
+
+  // Wheel zoom handler
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const zoomDelta = -e.deltaY * 0.0012;
+    setZoomLevel((prev) => Math.min(1.4, Math.max(0.5, prev + zoomDelta)));
+  };
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
 
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -30,14 +53,31 @@ export default function MapViewport({
     const dx = e.clientX - dragStart.current.x;
     const dy = e.clientY - dragStart.current.y;
 
-    const newX = Math.min(200, Math.max(-(MAP_WIDTH - window.innerWidth + 200), panStart.current.x + dx));
-    const newY = Math.min(200, Math.max(-(MAP_HEIGHT - window.innerHeight + 200), panStart.current.y + dy));
+    const viewportW = window.innerWidth - 390;
+    const viewportH = window.innerHeight - 168;
+
+    const scaledWidth = MAP_WIDTH * zoomLevel;
+    const scaledHeight = MAP_HEIGHT * zoomLevel;
+
+    const minX = Math.min(0, -(scaledWidth - viewportW));
+    const minY = Math.min(0, -(scaledHeight - viewportH));
+
+    const newX = Math.min(100, Math.max(minX - 100, panStart.current.x + dx));
+    const newY = Math.min(100, Math.max(minY - 100, panStart.current.y + dy));
 
     setPanPosition({ x: newX, y: newY });
   };
 
   const handleMouseUp = () => {
     isDragging.current = false;
+  };
+
+  const handleFitScreen = () => {
+    const viewportW = window.innerWidth - 390;
+    const viewportH = window.innerHeight - 168;
+    const scale = Math.min(viewportW / MAP_WIDTH, viewportH / MAP_HEIGHT);
+    setZoomLevel(Math.max(0.5, Math.min(1.2, scale * 1.05)));
+    setPanPosition({ x: 0, y: 0 });
   };
 
   return (
@@ -54,8 +94,9 @@ export default function MapViewport({
         style={{
           width: `${MAP_WIDTH}px`,
           height: `${MAP_HEIGHT}px`,
-          transform: `translate(${panPosition.x}px, ${panPosition.y}px)`,
-          transition: isDragging.current ? 'none' : 'transform 0.15s ease-out',
+          transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoomLevel})`,
+          transformOrigin: 'top left',
+          transition: isDragging.current ? 'none' : 'transform 0.12s ease-out',
         }}
         className="relative overflow-hidden border-2 border-frontier-800"
       >
@@ -85,13 +126,9 @@ export default function MapViewport({
         <TerrainEnvironment />
 
         {/* 4. Ambient Volumetric Biome Glow Wells */}
-        {/* West Forest Canopy Glow */}
         <div className="absolute top-[100px] left-[150px] w-[600px] h-[600px] bg-emerald-500/15 rounded-full blur-[140px] pointer-events-none" />
-        {/* Central Landing Crater Glow */}
         <div className="absolute top-[520px] left-[1180px] w-[500px] h-[500px] bg-amber-500/15 rounded-full blur-[130px] pointer-events-none" />
-        {/* Northeast Volcanic Magma Glow */}
         <div className="absolute top-[100px] left-[1500px] w-[700px] h-[500px] bg-orange-600/20 rounded-full blur-[150px] pointer-events-none" />
-        {/* Southeast Crystal Geode Cave Glow */}
         <div className="absolute top-[950px] left-[1750px] w-[600px] h-[500px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
 
         {/* 5. Interactive Resource Nodes with Ground Dioramas & Sleek Tactical Pins */}
@@ -104,9 +141,57 @@ export default function MapViewport({
               machine={attachedMachine}
               onHarvest={onHarvest}
               onDeploy={onDeployMachine}
+              onCollect={onCollectMachine}
+              hasDrillInInventory={hasDrillInInventory}
+              currentPlayer={currentPlayer}
             />
           );
         })}
+      </div>
+
+      {/* Floating Tactical Zoom Controls HUD (Bottom Left) */}
+      <div className="absolute bottom-5 left-5 z-30 flex items-center bg-frontier-950/90 border border-frontier-700/80 rounded-md p-1 shadow-2xl backdrop-blur-md font-mono text-xs text-slate-300 space-x-1">
+        <button
+          onClick={() => setZoomLevel((z) => Math.max(0.5, z - 0.15))}
+          title="Zoom Out (Mouse Wheel Down)"
+          className="p-1.5 hover:bg-frontier-800 rounded text-cyan-400 hover:text-cyan-200 transition-colors"
+        >
+          <ZoomOut className="w-4 h-4" />
+        </button>
+
+        <span className="px-2 py-0.5 bg-frontier-900 rounded text-[11px] font-bold text-cyan-300 min-w-[48px] text-center border border-frontier-800">
+          {Math.round(zoomLevel * 100)}%
+        </span>
+
+        <button
+          onClick={() => setZoomLevel((z) => Math.min(1.4, z + 0.15))}
+          title="Zoom In (Mouse Wheel Up)"
+          className="p-1.5 hover:bg-frontier-800 rounded text-cyan-400 hover:text-cyan-200 transition-colors"
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
+
+        <div className="w-[1px] h-4 bg-frontier-800 mx-1" />
+
+        <button
+          onClick={handleFitScreen}
+          title="Fit Sector to Screen"
+          className="px-2 py-1 hover:bg-frontier-800 rounded text-[10px] font-bold text-slate-300 hover:text-white flex items-center space-x-1 transition-colors"
+        >
+          <Maximize2 className="w-3 h-3" />
+          <span>FIT</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setZoomLevel(1.0);
+            setPanPosition({ x: -400, y: -200 });
+          }}
+          title="Reset View 100%"
+          className="p-1.5 hover:bg-frontier-800 rounded text-slate-400 hover:text-white transition-colors"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );

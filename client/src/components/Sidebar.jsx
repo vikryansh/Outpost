@@ -12,6 +12,7 @@ export default function Sidebar({
   onCraft,
   onCreateTrade,
   onAcceptTrade,
+  onCancelTrade,
   onCollectMachine,
 }) {
   const [activeTab, setActiveTab] = useState('crafting');
@@ -106,6 +107,7 @@ export default function Sidebar({
             currentPlayer={currentPlayer}
             onCreateOffer={onCreateTrade}
             onAcceptOffer={onAcceptTrade}
+            onCancelOffer={onCancelTrade}
           />
         )}
 

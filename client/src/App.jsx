@@ -14,6 +14,7 @@ import {
   getTrades,
   createTrade,
   acceptTrade,
+  cancelTrade,
   getMachines,
   deployMachine,
   collectMachineBuffer,
@@ -31,6 +32,7 @@ export default function App() {
   const [serverConnected, setServerConnected] = useState(false);
   const [latestVersion, setLatestVersion] = useState(1);
   const [activeAlert, setActiveAlert] = useState(null);
+  const [victoryState, setVictoryState] = useState(null);
   const [panPosition, setPanPosition] = useState({ x: -400, y: -200 }); // Default centered view
 
   // Initial Data Fetch
@@ -117,10 +119,20 @@ export default function App() {
       getInventory(currentPlayer).then(setInventory);
     });
 
-    // 4. Global Event Ticker Feed
+    socket.on('TRADE_CANCELLED', (payload) => {
+      setTrades((prev) => prev.filter((t) => t.id !== payload.tradeId));
+      getInventory(currentPlayer).then(setInventory);
+    });
+
+    // 4. Victory Condition Broadcast
+    socket.on('VICTORY_ACHIEVED', (payload) => {
+      setVictoryState(payload);
+    });
+
+    // 5. Global Event Ticker Feed
     socket.on('GLOBAL_TICKER_LOG', (log) => {
       setEvents((prev) => [...prev.slice(-49), log]);
-      if (log.message.includes('🚨') || log.message.includes('Emergency')) {
+      if (log.message.includes('🚨') || log.message.includes('Emergency') || log.message.includes('🏆')) {
         setActiveAlert(log.message);
         setTimeout(() => setActiveAlert(null), 8000);
       }
@@ -134,6 +146,8 @@ export default function App() {
       socket.off('MACHINE_DEPLOYED');
       socket.off('NEW_TRADE_OFFER');
       socket.off('TRADE_COMPLETED');
+      socket.off('TRADE_CANCELLED');
+      socket.off('VICTORY_ACHIEVED');
       socket.off('GLOBAL_TICKER_LOG');
     };
   }, [currentPlayer]);
@@ -142,7 +156,12 @@ export default function App() {
   const handleHarvest = async (nodeId) => {
     const res = await harvestNode(nodeId, currentPlayer);
     if (res.ok && res.success) {
-      // Refresh inventory
+      if (res.data?.node) {
+        setNodes((prev) =>
+          prev.map((n) => (n.id === nodeId ? { ...n, ...res.data.node } : n))
+        );
+        setLatestVersion((prev) => Math.max(prev, res.data.node.version));
+      }
       const inv = await getInventory(currentPlayer);
       setInventory(inv);
     }
@@ -154,6 +173,12 @@ export default function App() {
     if (res.success) {
       const inv = await getInventory(currentPlayer);
       setInventory(inv);
+      if (item === 'surveyors_beacon') {
+        setVictoryState({
+          playerId: currentPlayer,
+          message: `🏆 CONGRATULATIONS! You assembled the Surveyor's Beacon! Sector 9 Frontier Secured!`,
+        });
+      }
     }
     return res;
   };
@@ -171,6 +196,17 @@ export default function App() {
 
   const handleAcceptTrade = async (tradeId) => {
     const res = await acceptTrade(tradeId, currentPlayer);
+    if (res.success) {
+      const inv = await getInventory(currentPlayer);
+      setInventory(inv);
+      const trs = await getTrades();
+      setTrades(trs);
+    }
+    return res;
+  };
+
+  const handleCancelTrade = async (tradeId) => {
+    const res = await cancelTrade(tradeId, currentPlayer);
     if (res.success) {
       const inv = await getInventory(currentPlayer);
       setInventory(inv);
@@ -213,13 +249,40 @@ export default function App() {
         activeAlert={activeAlert}
       />
 
+      {/* Victory Celebration Modal */}
+      {victoryState && (
+        <div className="absolute inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+          <div className="bg-frontier-900 border-2 border-yellow-400 rounded-lg p-6 max-w-lg w-full text-center shadow-neon-gold space-y-4">
+            <div className="text-4xl animate-bounce">🏆</div>
+            <h2 className="text-xl font-mono font-extrabold text-yellow-300 tracking-wider uppercase">
+              SECTOR 9 SURVEY COMPLETED!
+            </h2>
+            <p className="font-mono text-sm text-slate-200">
+              {victoryState.message}
+            </p>
+            <div className="bg-frontier-950 border border-yellow-500/40 p-3 rounded font-mono text-xs text-yellow-200">
+              The planetary communications beacon is transmitting telemetry back to Central Command. All objectives achieved!
+            </div>
+            <button
+              onClick={() => setVictoryState(null)}
+              className="px-6 py-2 bg-yellow-500 hover:bg-yellow-400 text-frontier-950 font-mono font-extrabold uppercase rounded shadow-lg transition-transform active:scale-95"
+            >
+              CONTINUE EXPLORING
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 2. Main Middle Area: Pannable Terrain Map + Sidebar */}
       <div className="flex-1 flex overflow-hidden relative">
         <MapViewport
           nodes={nodes}
           machines={machines}
+          inventory={inventory}
+          currentPlayer={currentPlayer}
           onHarvest={handleHarvest}
           onDeployMachine={handleDeployMachine}
+          onCollectMachine={handleCollectMachine}
           panPosition={panPosition}
           setPanPosition={setPanPosition}
         />
@@ -242,6 +305,7 @@ export default function App() {
           onCraft={handleCraft}
           onCreateTrade={handleCreateTrade}
           onAcceptTrade={handleAcceptTrade}
+          onCancelTrade={handleCancelTrade}
           onCollectMachine={handleCollectMachine}
         />
       </div>

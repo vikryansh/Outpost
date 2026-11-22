@@ -10,10 +10,13 @@ export default function RadarMinimap({ nodes, panPosition, onPanTo, activePing }
   const scaleX = MINI_WIDTH / MAP_WIDTH;
   const scaleY = MINI_HEIGHT / MAP_HEIGHT;
 
-  const viewWidth = window.innerWidth * scaleX;
-  const viewHeight = (window.innerHeight - 168) * scaleY;
-  const viewX = Math.max(0, -panPosition.x * scaleX);
-  const viewY = Math.max(0, -panPosition.y * scaleY);
+  const viewportW = Math.max(400, window.innerWidth - 390);
+  const viewportH = Math.max(300, window.innerHeight - 168);
+
+  const viewWidth = Math.min(MINI_WIDTH, viewportW * scaleX);
+  const viewHeight = Math.min(MINI_HEIGHT, viewportH * scaleY);
+  const viewX = Math.max(0, Math.min(MINI_WIDTH - viewWidth, -panPosition.x * scaleX));
+  const viewY = Math.max(0, Math.min(MINI_HEIGHT - viewHeight, -panPosition.y * scaleY));
 
   const handleMinimapClick = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -23,10 +26,16 @@ export default function RadarMinimap({ nodes, panPosition, onPanTo, activePing }
     const targetMapX = clickX / scaleX;
     const targetMapY = clickY / scaleY;
 
-    const newPanX = -targetMapX + window.innerWidth / 2;
-    const newPanY = -targetMapY + (window.innerHeight - 168) / 2;
+    const targetPanX = -targetMapX + viewportW / 2;
+    const targetPanY = -targetMapY + viewportH / 2;
 
-    onPanTo({ x: newPanX, y: newPanY });
+    const minX = Math.min(0, -(MAP_WIDTH - viewportW));
+    const minY = Math.min(0, -(MAP_HEIGHT - viewportH));
+
+    const clampedX = Math.min(100, Math.max(minX - 100, targetPanX));
+    const clampedY = Math.min(100, Math.max(minY - 100, targetPanY));
+
+    onPanTo({ x: clampedX, y: clampedY });
   };
 
   return (

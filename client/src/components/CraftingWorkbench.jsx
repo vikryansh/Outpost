@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Hammer, Check, X, Sparkles } from 'lucide-react';
+import { Hammer, Check, X, Sparkles, AlertTriangle } from 'lucide-react';
 
 export default function CraftingWorkbench({ inventory, recipes, onCraft }) {
   const [craftingItem, setCraftingItem] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const getInventoryCount = (itemType) => {
     const item = inventory.find((i) => i.item_type === itemType);
@@ -11,12 +12,27 @@ export default function CraftingWorkbench({ inventory, recipes, onCraft }) {
 
   const handleCraft = async (itemName) => {
     setCraftingItem(itemName);
-    await onCraft(itemName);
+    setErrorMsg(null);
+    const res = await onCraft(itemName);
     setCraftingItem(null);
+    if (res && !res.success) {
+      setErrorMsg(res.message || 'Craft failed. Check your inventory.');
+    }
   };
 
   return (
     <div className="space-y-3">
+      {/* Error Alert */}
+      {errorMsg && (
+        <div className="bg-red-950/80 border border-red-500/60 p-2 rounded flex items-center space-x-2 text-xs font-mono text-red-300 animate-shake">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <span className="flex-1">{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-white font-bold">
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between text-xs font-mono text-slate-400 border-b border-frontier-800 pb-2">
         <div className="flex items-center space-x-1.5 text-cyan-400 font-bold">
           <Hammer className="w-4 h-4" />

@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, PlusCircle, CheckCircle, Handshake } from 'lucide-react';
+import { ArrowLeftRight, PlusCircle, CheckCircle, Handshake, AlertTriangle, Undo2 } from 'lucide-react';
 
-export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAcceptOffer }) {
+export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAcceptOffer, onCancelOffer }) {
   const [tab, setTab] = useState('browse'); // 'browse' | 'create'
   const [offeredItem, setOfferedItem] = useState('timber');
   const [offeredQty, setOfferedQty] = useState(2);
   const [demandedItem, setDemandedItem] = useState('copper_ore');
   const [demandedQty, setDemandedQty] = useState(2);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await onCreateOffer({
+    setErrorMsg(null);
+
+    const res = await onCreateOffer({
       creatorPlayerId: currentPlayer,
       offeredItem,
       offeredQuantity: parseInt(offeredQty, 10),
@@ -20,7 +23,30 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
       demandedQuantity: parseInt(demandedQty, 10),
     });
     setLoading(false);
-    setTab('browse');
+
+    if (res && res.error) {
+      setErrorMsg(res.message || 'Failed to post escrow offer (Insufficient items).');
+    } else {
+      setTab('browse');
+    }
+  };
+
+  const handleAcceptClick = async (tradeId) => {
+    setErrorMsg(null);
+    const res = await onAcceptOffer(tradeId);
+    if (res && res.error) {
+      setErrorMsg(res.message || 'Cannot accept trade (Insufficient inventory).');
+    }
+  };
+
+  const handleCancelClick = async (tradeId) => {
+    setErrorMsg(null);
+    if (onCancelOffer) {
+      const res = await onCancelOffer(tradeId);
+      if (res && res.error) {
+        setErrorMsg(res.message || 'Failed to cancel trade.');
+      }
+    }
   };
 
   const ITEMS = [
@@ -37,6 +63,17 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
 
   return (
     <div className="space-y-3">
+      {/* Error Alert Banner */}
+      {errorMsg && (
+        <div className="bg-red-950/80 border border-red-500/60 p-2 rounded flex items-center space-x-2 text-xs font-mono text-red-300 animate-shake">
+          <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+          <span className="flex-1">{errorMsg}</span>
+          <button onClick={() => setErrorMsg(null)} className="text-red-400 hover:text-white font-bold">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Sub-Tabs: Browse Offers vs Create Offer */}
       <div className="flex rounded border border-frontier-800 bg-frontier-950 p-0.5 text-xs font-mono">
         <button
@@ -95,18 +132,29 @@ export default function TradingPost({ trades, currentPlayer, onCreateOffer, onAc
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onAcceptOffer(t.id)}
-                    disabled={isOwnOffer}
-                    className={`w-full py-1.5 rounded font-mono font-bold text-xs uppercase tracking-wider transition-all duration-150 flex items-center justify-center space-x-1.5 ${
-                      isOwnOffer
-                        ? 'bg-frontier-900 text-slate-500 cursor-not-allowed border border-frontier-800'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95'
-                    }`}
-                  >
-                    <Handshake className="w-3.5 h-3.5" />
-                    <span>{isOwnOffer ? 'YOUR ESCROW' : 'ACCEPT SWAP'}</span>
-                  </button>
+                  {isOwnOffer ? (
+                    <div className="flex space-x-2">
+                      <div className="flex-1 py-1.5 rounded font-mono font-bold text-xs uppercase tracking-wider text-center bg-frontier-900 text-slate-400 border border-frontier-800 flex items-center justify-center">
+                        YOUR ESCROW
+                      </div>
+                      <button
+                        onClick={() => handleCancelClick(t.id)}
+                        className="px-3 py-1.5 rounded font-mono font-bold text-xs uppercase bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-500/50 flex items-center space-x-1 shadow-sm transition-colors active:scale-95"
+                        title="Cancel offer and refund escrowed items"
+                      >
+                        <Undo2 className="w-3.5 h-3.5" />
+                        <span>CANCEL</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleAcceptClick(t.id)}
+                      className="w-full py-1.5 rounded font-mono font-bold text-xs uppercase tracking-wider transition-all duration-150 flex items-center justify-center space-x-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md active:scale-95"
+                    >
+                      <Handshake className="w-3.5 h-3.5" />
+                      <span>ACCEPT SWAP</span>
+                    </button>
+                  )}
                 </div>
               );
             })

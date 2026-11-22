@@ -57,6 +57,15 @@ export async function acceptTrade(tradeId, buyerPlayerId) {
   return res.json();
 }
 
+export async function cancelTrade(tradeId, creatorPlayerId) {
+  const res = await fetch(`${API_BASE}/api/trades/${tradeId}/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creatorPlayerId }),
+  });
+  return res.json();
+}
+
 export async function getMachines() {
   const res = await fetch(`${API_BASE}/api/machines`);
   return res.json();

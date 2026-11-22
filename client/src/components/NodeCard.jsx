@@ -64,13 +64,25 @@ const BIOME_THEMES = {
   },
 };
 
-export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
+export default function NodeCard({
+  node,
+  machine,
+  onHarvest,
+  onDeploy,
+  onCollect,
+  hasDrillInInventory,
+  currentPlayer,
+}) {
   const [loading, setLoading] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [collecting, setCollecting] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [floatingParticles, setFloatingParticles] = useState([]);
 
   const theme = BIOME_THEMES[node.resource_type] || BIOME_THEMES.timber;
   const isDepleted = node.remaining_units <= 0;
+  const isMineable = node.resource_type === 'iron_ore' || node.resource_type === 'copper_ore';
+  const isMachineOwner = machine && machine.player_id === currentPlayer;
 
   const handleHarvestClick = async (e) => {
     e.stopPropagation();
@@ -94,6 +106,52 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
       }, 1500);
     } else {
       setFeedback({ type: 'error', text: res.message || 'RACE LOST (409)' });
+    }
+
+    setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const handleDeployClick = async (e) => {
+    e.stopPropagation();
+    if (deploying || machine) return;
+
+    setDeploying(true);
+    setFeedback(null);
+
+    const res = await onDeploy(node.id, 'MK1_DRILL');
+    setDeploying(false);
+
+    if (res.success) {
+      setFeedback({ type: 'success', text: 'DRILL DEPLOYED!' });
+    } else {
+      setFeedback({ type: 'error', text: res.message || 'DEPLOY FAILED' });
+    }
+
+    setTimeout(() => setFeedback(null), 2500);
+  };
+
+  const handleCollectClick = async (e) => {
+    e.stopPropagation();
+    if (collecting || !machine || machine.buffer_units <= 0) return;
+
+    setCollecting(true);
+    setFeedback(null);
+
+    const res = await onCollect(machine.id);
+    setCollecting(false);
+
+    if (res.success) {
+      setFeedback({ type: 'success', text: `+${res.data?.collectedUnits || machine.buffer_units} COLLECTED` });
+      const pId = Date.now();
+      setFloatingParticles((prev) => [
+        ...prev,
+        { id: pId, text: `+${machine.buffer_units} ${node.resource_type.replace('_', ' ').toUpperCase()}` },
+      ]);
+      setTimeout(() => {
+        setFloatingParticles((prev) => prev.filter((p) => p.id !== pId));
+      }, 1500);
+    } else {
+      setFeedback({ type: 'error', text: res.message || 'COLLECT FAILED' });
     }
 
     setTimeout(() => setFeedback(null), 2500);
@@ -161,7 +219,10 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
           <div className="mb-1.5 px-1.5 py-0.5 bg-cyan-950/80 border border-cyan-500/50 rounded flex items-center justify-between text-[9px] font-mono text-cyan-300">
             <div className="flex items-center space-x-1">
               <Wrench className="w-2.5 h-2.5 animate-spin" />
-              <span className="font-bold">MK-1 Drill</span>
+              <span className="font-bold">MK-1 Drill #{machine.id}</span>
+              <span className="text-[8px] text-slate-400">
+                ({machine.player_id === currentPlayer ? 'You' : `P#${machine.player_id}`})
+              </span>
             </div>
             <span className="font-extrabold bg-cyan-900/60 px-1 rounded">
               {machine.buffer_units}/{machine.buffer_capacity}
@@ -169,19 +230,46 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
           </div>
         )}
 
-        {/* Action Extract Button */}
-        <button
-          onClick={handleHarvestClick}
-          disabled={loading || isDepleted}
-          className={`w-full py-1 rounded font-mono font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 bevel-both-r ${
-            isDepleted
-              ? 'bg-frontier-900 text-slate-600 border border-slate-800 cursor-not-allowed'
-              : 'bg-frontier-800 hover:bg-cyan-600 text-white border border-cyan-500/50 hover:shadow-neon-cyan active:scale-95'
-          }`}
-        >
-          <Pickaxe className="w-3 h-3" />
-          <span>{loading ? 'LOCKING...' : isDepleted ? 'DEPLETED' : 'EXTRACT'}</span>
-        </button>
+        {/* Action Buttons Grid / Stack */}
+        <div className="space-y-1">
+          {/* Extract Button */}
+          <button
+            onClick={handleHarvestClick}
+            disabled={loading || isDepleted}
+            className={`w-full py-1 rounded font-mono font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 bevel-both-r ${
+              isDepleted
+                ? 'bg-frontier-900 text-slate-600 border border-slate-800 cursor-not-allowed'
+                : 'bg-frontier-800 hover:bg-cyan-600 text-white border border-cyan-500/50 hover:shadow-neon-cyan active:scale-95'
+            }`}
+          >
+            <Pickaxe className="w-3 h-3" />
+            <span>{loading ? 'LOCKING...' : isDepleted ? 'DEPLETED' : 'EXTRACT'}</span>
+          </button>
+
+          {/* Collect Machine Buffer Button (If machine owned and has units) */}
+          {machine && isMachineOwner && machine.buffer_units > 0 && (
+            <button
+              onClick={handleCollectClick}
+              disabled={collecting}
+              className="w-full py-1 rounded font-mono font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-500 text-white shadow-neon-emerald active:scale-95 bevel-both-r"
+            >
+              <Wrench className="w-3 h-3" />
+              <span>{collecting ? 'COLLECTING...' : `COLLECT (+${machine.buffer_units})`}</span>
+            </button>
+          )}
+
+          {/* Deploy MK-1 Drill Button (If node mineable, no drill yet, and player has drill) */}
+          {!machine && isMineable && hasDrillInInventory && (
+            <button
+              onClick={handleDeployClick}
+              disabled={deploying}
+              className="w-full py-1 rounded font-mono font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 bg-amber-600 hover:bg-amber-500 text-white border border-amber-400 shadow-neon-amber active:scale-95 bevel-both-r"
+            >
+              <Wrench className="w-3 h-3" />
+              <span>{deploying ? 'DEPLOYING...' : '⚙ DEPLOY MK-1 DRILL'}</span>
+            </button>
+          )}
+        </div>
 
         {/* Feedback Alert Pill */}
         {feedback && (
