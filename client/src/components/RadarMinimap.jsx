@@ -2,9 +2,9 @@ import React from 'react';
 import { Crosshair, Compass } from 'lucide-react';
 
 const MAP_WIDTH = 2500;
-const MAP_HEIGHT = 1800;
+const MAP_HEIGHT = 1400;
 const MINI_WIDTH = 240;
-const MINI_HEIGHT = 175;
+const MINI_HEIGHT = 140;
 
 export default function RadarMinimap({ nodes, panPosition, onPanTo, activePing }) {
   const scaleX = MINI_WIDTH / MAP_WIDTH;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pickaxe, Wrench, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Pickaxe, Wrench, CheckCircle2, AlertTriangle, Sparkles } from 'lucide-react';
 import {
   ForestBiome,
   IronMineBiome,
@@ -11,35 +11,61 @@ import {
 
 const BIOME_THEMES = {
   timber: {
-    badge: 'border-emerald-500/60 bg-frontier-900/95 text-emerald-300',
-    barFill: 'bg-emerald-400 shadow-neon-emerald',
+    border: 'border-emerald-500/70',
+    glow: 'shadow-neon-emerald',
+    text: 'text-emerald-300',
+    barFill: 'bg-emerald-400',
+    reticle: 'border-emerald-400/50',
     Component: ForestBiome,
+    shortName: 'Timber Grove',
+    icon: '🌲',
   },
   iron_ore: {
-    badge: 'border-amber-500/60 bg-frontier-900/95 text-amber-300',
-    barFill: 'bg-amber-400 shadow-neon-amber',
+    border: 'border-amber-500/70',
+    glow: 'shadow-neon-amber',
+    text: 'text-amber-300',
+    barFill: 'bg-amber-400',
+    reticle: 'border-amber-400/50',
     Component: IronMineBiome,
+    shortName: 'Iron Vein',
+    icon: '⛏️',
   },
   copper_ore: {
-    badge: 'border-cyan-500/60 bg-frontier-900/95 text-cyan-300',
-    barFill: 'bg-cyan-400 shadow-neon-cyan',
+    border: 'border-cyan-500/70',
+    glow: 'shadow-neon-cyan',
+    text: 'text-cyan-300',
+    barFill: 'bg-cyan-400',
+    reticle: 'border-cyan-400/50',
     Component: CopperMineBiome,
+    shortName: 'Copper Ridge',
+    icon: '⚡',
   },
   energy_crystal: {
-    badge: 'border-purple-500/60 bg-frontier-900/95 text-purple-300',
-    barFill: 'bg-purple-400 shadow-neon-purple',
+    border: 'border-purple-500/70',
+    glow: 'shadow-neon-purple',
+    text: 'text-purple-300',
+    barFill: 'bg-purple-400',
+    reticle: 'border-purple-400/50',
     Component: CrystalGeodeBiome,
+    shortName: 'Crystal Geode',
+    icon: '💎',
   },
   circuit_board: {
-    badge: 'border-yellow-400/80 bg-frontier-900/95 text-yellow-300',
-    barFill: 'bg-yellow-400 shadow-neon-gold',
+    border: 'border-yellow-400/80',
+    glow: 'shadow-neon-gold',
+    text: 'text-yellow-300',
+    barFill: 'bg-yellow-400',
+    reticle: 'border-yellow-400/60',
     Component: OrbitalPodBiome,
+    shortName: 'Supply Pod',
+    icon: '📦',
   },
 };
 
 export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [floatingParticles, setFloatingParticles] = useState([]);
 
   const theme = BIOME_THEMES[node.resource_type] || BIOME_THEMES.timber;
   const BiomeGraphic = theme.Component;
@@ -57,6 +83,12 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
 
     if (res.ok && res.success) {
       setFeedback({ type: 'success', text: `+1 ${node.resource_type.toUpperCase()}` });
+      // Add floating particle
+      const pId = Date.now();
+      setFloatingParticles((prev) => [...prev, { id: pId, text: `+1 ${node.resource_type.replace('_', ' ').toUpperCase()}` }]);
+      setTimeout(() => {
+        setFloatingParticles((prev) => prev.filter((p) => p.id !== pId));
+      }, 1500);
     } else {
       setFeedback({ type: 'error', text: res.message || 'RACE LOST (409)' });
     }
@@ -72,117 +104,115 @@ export default function NodeCard({ node, machine, onHarvest, onDeploy }) {
         top: `${node.coord_y}px`,
         transform: 'translate(-50%, -50%)',
       }}
-      className="flex flex-col items-center select-none z-20 group"
+      className="flex flex-col items-center select-none z-20 group pointer-events-auto"
     >
-      {/* 1. Floating Holographic Data Plate (Above the terrain diorama) */}
+      {/* Floating Gain Particle Animations */}
+      {floatingParticles.map((p) => (
+        <div
+          key={p.id}
+          className="absolute -top-16 font-mono font-extrabold text-xs text-emerald-300 bg-frontier-950/90 px-2 py-0.5 rounded border border-emerald-400 shadow-neon-emerald animate-bounce z-40 pointer-events-none"
+        >
+          {p.text}
+        </div>
+      ))}
+
+      {/* 1. Sleek Compact Tactical Pin (Floating Above Ground Diorama) */}
       <div
-        className={`w-64 border-2 rounded-lg p-3 backdrop-blur-md shadow-2xl transition-all duration-200 ${
-          theme.badge
-        } ${feedback?.type === 'error' ? 'animate-shake border-red-500 bg-red-950/95' : ''}`}
+        className={`w-48 bg-frontier-950/90 border backdrop-blur-md rounded-md p-2 shadow-2xl transition-all duration-200 z-30 ${
+          theme.border
+        } group-hover:scale-105 group-hover:bg-frontier-900 ${
+          feedback?.type === 'error' ? 'animate-shake border-red-500 bg-red-950/95' : ''
+        }`}
       >
-        {/* Sector Tag & Version Badge */}
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center space-x-1.5">
-            <span className="text-[10px] font-mono font-extrabold bg-frontier-950 px-2 py-0.5 rounded border border-frontier-700 text-cyan-300">
-              SECTOR {node.grid_sector}
-            </span>
-            <span className="text-[10px] font-mono text-slate-400">v{node.version}</span>
+        {/* Top Header Row */}
+        <div className="flex items-center justify-between text-[10px] font-mono mb-1 leading-tight">
+          <div className="flex items-center space-x-1 font-bold truncate">
+            <span className="text-xs">{theme.icon}</span>
+            <span className={`truncate ${theme.text}`}>{theme.shortName}</span>
           </div>
 
-          <span
-            className={`text-[9px] font-mono font-extrabold uppercase px-1.5 py-0.5 rounded ${
-              isDepleted
-                ? 'bg-red-500/20 text-red-400 border border-red-500/40'
-                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-            }`}
-          >
-            {isDepleted ? 'DEPLETED' : 'CONTESTED'}
+          <span className="text-[9px] font-extrabold px-1 rounded bg-frontier-900 text-slate-300 border border-slate-700">
+            {node.grid_sector}
           </span>
         </div>
 
-        {/* Node Name */}
-        <h4 className="text-xs font-extrabold text-slate-100 truncate mb-2" title={node.name}>
-          {node.name}
-        </h4>
-
-        {/* Segmented Capacity Indicator */}
-        <div className="mb-2.5 bg-frontier-950 p-1.5 rounded border border-frontier-800">
-          <div className="flex justify-between text-[9px] font-mono mb-1">
-            <span className="text-slate-400">Resource Reserve</span>
-            <span className="text-cyan-300 font-bold">
-              {node.remaining_units}/{node.max_capacity}
-            </span>
+        {/* Capacity Indicator & Ratio */}
+        <div className="flex items-center space-x-1.5 mb-1.5">
+          <div className="flex-1 flex space-x-0.5 h-1.5 bg-frontier-900 p-0.5 rounded">
+            {Array.from({ length: node.max_capacity }).map((_, idx) => (
+              <div
+                key={idx}
+                className={`flex-1 rounded-xs transition-all duration-200 ${
+                  idx < node.remaining_units ? theme.barFill : 'bg-slate-800'
+                }`}
+              />
+            ))}
           </div>
-
-          <div className="flex space-x-0.5 h-1.5">
-            {Array.from({ length: node.max_capacity }).map((_, idx) => {
-              const isFilled = idx < node.remaining_units;
-              return (
-                <div
-                  key={idx}
-                  className={`flex-1 rounded-xs transition-all duration-300 ${
-                    isFilled ? theme.barFill : 'bg-frontier-800/60'
-                  }`}
-                />
-              );
-            })}
-          </div>
+          <span className="text-[9px] font-mono font-bold text-slate-300">
+            {node.remaining_units}/{node.max_capacity}
+          </span>
         </div>
 
-        {/* Machine Overlay (If deployed) */}
+        {/* Machine Status Pill (If MK-1 Drill deployed) */}
         {machine && (
-          <div className="mb-2 bg-frontier-950 border border-cyan-500/50 p-1.5 rounded text-xs font-mono flex items-center justify-between shadow-neon-cyan">
-            <div className="flex items-center space-x-1.5">
-              <Wrench className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
-              <span className="text-slate-200 text-[10px] font-bold">MK-1 Drill #{machine.id}</span>
+          <div className="mb-1.5 px-1.5 py-0.5 bg-cyan-950/80 border border-cyan-500/50 rounded flex items-center justify-between text-[9px] font-mono text-cyan-300">
+            <div className="flex items-center space-x-1">
+              <Wrench className="w-2.5 h-2.5 animate-spin" />
+              <span className="font-bold">MK-1 Drill</span>
             </div>
-            <span className="text-cyan-300 text-[10px] font-extrabold bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-500/40">
+            <span className="font-extrabold bg-cyan-900/60 px-1 rounded">
               {machine.buffer_units}/{machine.buffer_capacity}
             </span>
           </div>
         )}
 
-        {/* Action Feedback */}
-        {feedback && (
-          <div
-            className={`mb-2 py-1 px-2 rounded text-center text-[10px] font-mono font-bold flex items-center justify-center space-x-1 ${
-              feedback.type === 'success'
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-neon-emerald'
-                : 'bg-red-500/20 text-red-300 border border-red-500/50'
-            }`}
-          >
-            {feedback.type === 'success' ? (
-              <CheckCircle2 className="w-3 h-3" />
-            ) : (
-              <AlertTriangle className="w-3 h-3" />
-            )}
-            <span>{feedback.text}</span>
-          </div>
-        )}
-
-        {/* Extract Button */}
+        {/* Action Button */}
         <button
           onClick={handleHarvestClick}
           disabled={loading || isDepleted}
-          className={`w-full py-1.5 rounded font-mono font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center space-x-1.5 bevel-both-r ${
+          className={`w-full py-1 rounded font-mono font-extrabold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center space-x-1 bevel-both-r ${
             isDepleted
-              ? 'bg-frontier-950 text-slate-600 border border-frontier-800 cursor-not-allowed'
+              ? 'bg-frontier-900 text-slate-600 border border-slate-800 cursor-not-allowed'
               : 'bg-frontier-800 hover:bg-cyan-600 text-white border border-cyan-500/50 hover:shadow-neon-cyan active:scale-95'
           }`}
         >
-          <Pickaxe className="w-3.5 h-3.5" />
-          <span>{loading ? 'COMMITTING...' : isDepleted ? 'EXHAUSTED' : 'EXTRACT ORE'}</span>
+          <Pickaxe className="w-3 h-3" />
+          <span>{loading ? 'LOCKING...' : isDepleted ? 'DEPLETED' : 'EXTRACT'}</span>
         </button>
+
+        {/* Feedback Alert Pill */}
+        {feedback && (
+          <div
+            className={`mt-1 py-0.5 px-1.5 rounded text-center text-[9px] font-mono font-bold flex items-center justify-center space-x-1 ${
+              feedback.type === 'success'
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50'
+                : 'bg-red-500/20 text-red-300 border border-red-500/50'
+            }`}
+          >
+            {feedback.type === 'success' ? <CheckCircle2 className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+            <span>{feedback.text}</span>
+          </div>
+        )}
       </div>
 
-      {/* 2. Holographic Energy Stalk Line */}
-      <div className="w-[2px] h-6 bg-gradient-to-b from-cyan-400 via-cyan-500 to-transparent pointer-events-none" />
+      {/* 2. Delicate Holographic Energy Pointer Stalk */}
+      <div className="w-[1.5px] h-3 bg-gradient-to-b from-cyan-400 to-transparent pointer-events-none" />
 
-      {/* 3. Illustrated Ground Diorama (Visual Trees, Mines, Crystals, Drop Pod) */}
-      <div className="relative pointer-events-none flex items-center justify-center -mt-2">
+      {/* 3. Interactive Illustrated Ground Entity (Clickable World Diorama) */}
+      <div
+        onClick={handleHarvestClick}
+        title={`Click to extract from ${node.name}`}
+        className="relative cursor-pointer flex items-center justify-center -mt-2 group/diorama"
+      >
+        {/* Subtle ground tactical reticle on hover */}
+        <div
+          className={`absolute w-36 h-20 rounded-full border border-dashed transition-all duration-300 pointer-events-none opacity-0 group-hover/diorama:opacity-100 ${theme.reticle} animate-pulse`}
+        />
+
         {machine && (
           <DrillRigGraphic storedUnits={machine.buffer_units} capacity={machine.buffer_capacity} />
         )}
+
         <BiomeGraphic remainingUnits={node.remaining_units} maxCapacity={node.max_capacity} />
       </div>
     </div>
