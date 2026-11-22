@@ -1,0 +1,345 @@
+{
+  "info": {
+    "_postman_id": "outpost-concurrency-api-v1",
+    "name": "Outpost — Shared-World Resource & Automation Game API",
+    "description": "Comprehensive Postman test collection for Outpost API covering ACID transactions, zero-window atomic decrements, escrow standing-offer trades, dynamic pioneer enlistment, machine ticker automation, and 5,000-row audit ledger queries.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "playerId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "nodeId",
+      "value": "8",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. System & Health",
+      "item": [
+        {
+          "name": "Get Resource Nodes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/nodes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "nodes"]
+            },
+            "description": "Fetch all 8 active resource nodes with current capacity, remaining units, and monotonic database version."
+          }
+        },
+        {
+          "name": "Get Sector 9 Telemetry",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/sector/telemetry",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sector", "telemetry"]
+            },
+            "description": "Returns sector-wide metrics including total ore reserves, depletion percentage, active machines count, and 5,000+ row audit ledger volume."
+          }
+        },
+        {
+          "name": "Authoritative Game / Sector Reset",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/game/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game", "reset"]
+            },
+            "description": "Authoritatively resets all 8 nodes to 100% capacity, removes active machines, cancels open trades, resets starter inventories, and emits GAME_RESET socket event."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Players & Inventories",
+      "item": [
+        {
+          "name": "Get All Pioneers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players"]
+            },
+            "description": "List all registered players and roles."
+          }
+        },
+        {
+          "name": "Enlist New Pioneer (Registration)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"Commander_Test\",\n  \"role\": \"Field Engineer\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players"]
+            },
+            "description": "Enlists a new pioneer with starter pack allocation (6x Timber, 4x Iron Ore, 2x Copper Wire, 50 Credits) inside an atomic transaction."
+          }
+        },
+        {
+          "name": "Get Player Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/inventory",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "{{playerId}}", "inventory"]
+            },
+            "description": "Query live inventory balances for the specified player ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Contested Harvesting & Concurrency",
+      "item": [
+        {
+          "name": "Contested Node Atomic Harvest (Appendix A.4)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": {{playerId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/nodes/{{nodeId}}/harvest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "nodes", "{{nodeId}}", "harvest"]
+            },
+            "description": "Executes single-statement conditional atomic decrement. Returns 200 OK on success, or 409 Conflict if exhausted by a competing concurrent request."
+          }
+        },
+        {
+          "name": "Burst Concurrency Simulation Race",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nodeId\": 8,\n  \"requests\": 20,\n  \"playerId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/simulation/concurrency-race",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "simulation", "concurrency-race"]
+            },
+            "description": "Fires 20 simultaneous parallel harvest queries against Node #8 to prove zero-drift invariant guarantee under burst contention."
+          }
+        },
+        {
+          "name": "Trigger Orbital Supply Drop Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/events/supply-drop",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events", "supply-drop"]
+            },
+            "description": "Authoritatively deploys orbital supply pod drop at Crater Basin, refilling Node #8 and broadcasting SUPPLY_DROP_LANDED."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Crafting & Workbenches",
+      "item": [
+        {
+          "name": "Get Crafting Recipes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/recipes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "recipes"]
+            },
+            "description": "Fetch Satisfactory-inspired tiered crafting recipes (Iron Plate, Copper Wire, Circuit Board, Reinforced Frame, MK-1 Drill, Surveyor's Beacon)."
+          }
+        },
+        {
+          "name": "Craft Item (Atomic Multi-Ingredient Consume)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": {{playerId}},\n  \"item\": \"iron_plate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/craft",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "craft"]
+            },
+            "description": "Atomically consumes required ingredients and yields the crafted component. Rejects with 422 if inventory is deficient."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Deadlock-Free Escrow Trading (Appendix A.9.4)",
+      "item": [
+        {
+          "name": "Get Active Trades",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/trades",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trades"]
+            },
+            "description": "Lists all standing escrow offers in the sector market."
+          }
+        },
+        {
+          "name": "Create Escrow Standing Offer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creatorPlayerId\": 1,\n  \"offeredItem\": \"timber\",\n  \"offeredQuantity\": 2,\n  \"demandedItem\": \"copper_ore\",\n  \"demandedQuantity\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trades",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trades"]
+            },
+            "description": "Creates an escrow offer. Offered items are atomically deducted from seller inventory and held in escrow."
+          }
+        },
+        {
+          "name": "Accept Escrow Standing Offer (One-Sided)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerPlayerId\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trades/1/accept",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trades", "1", "accept"]
+            },
+            "description": "Executes one-sided atomic swap: transfers escrowed item to buyer and deposits demanded payment to seller in deterministic PK order."
+          }
+        },
+        {
+          "name": "Cancel Escrow Standing Offer (Refund)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creatorPlayerId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/trades/1/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "trades", "1", "cancel"]
+            },
+            "description": "Authoritative cancellation of standing offer with immediate atomic refund of escrowed items to creator."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Autonomous Machine Engine (MK-1 Drills)",
+      "item": [
+        {
+          "name": "Get Deployed Machines",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/machines",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "machines"]
+            },
+            "description": "Lists all deployed automated drill rigs across Sector 9."
+          }
+        },
+        {
+          "name": "Deploy MK-1 Drill Rig",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": 1,\n  \"nodeId\": 4,\n  \"machineType\": \"MK1_DRILL\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/machines/deploy",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "machines", "deploy"]
+            },
+            "description": "Deploys an MK-1 automated drill on a mineable resource vein. Consumes 1x mk1_drill from player inventory."
+          }
+        },
+        {
+          "name": "Collect Machine Buffer (Authorization Guarded)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/machines/1/collect",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "machines", "1", "collect"]
+            },
+            "description": "Collects accumulated ore from drill buffer into player inventory. Enforces ownership: returns 403 Forbidden for non-owners."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Audit Ledger Feed",
+      "item": [
+        {
+          "name": "Get Recent Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Fetch latest entries from the 5,000+ row append-only audit ledger with cryptographic hash chaining."
+          }
+        }
+      ]
+    }
+  ]
+}
