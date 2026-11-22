@@ -11,6 +11,12 @@ const { pool, query } = require('./db');
 const { harvestNode } = require('./services/harvestService');
 const { craftItem, RECIPES } = require('./services/craftService');
 const { createStandingOffer, acceptStandingOffer } = require('./services/tradeService');
+const {
+  deployMachine,
+  collectMachineBuffer,
+  startMachineEngine,
+  startRegenerationEngine,
+} = require('./services/machineTicker');
 
 const app = express();
 const server = http.createServer(app);
@@ -35,7 +41,7 @@ function emitSocketEvent(eventName, payload) {
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', service: 'Outpost Backend', timestamp: new Date().toISOString() });
+  res.json({ status: 'OK', service: 'Outpost Backend Engine', timestamp: new Date().toISOString() });
 });
 
 // 1. Get all planetary resource nodes
@@ -60,6 +66,12 @@ app.post('/api/nodes/:id/harvest', async (req, res) => {
     if (!result.success) {
       return res.status(result.status).json(result);
     }
+
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `⛏️ Player #${playerId} harvested 1 ${result.data.harvestedItem} from node #${nodeId}`,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'HARVEST_ERROR', message: err.message });
@@ -80,7 +92,7 @@ app.get('/api/players/:id/inventory', async (req, res) => {
   }
 });
 
-// 4. Crafting Endpoint
+// 4. Crafting Endpoints
 app.get('/api/recipes', (req, res) => {
   res.json(RECIPES);
 });
@@ -96,6 +108,12 @@ app.post('/api/craft', async (req, res) => {
     if (!result.success) {
       return res.status(result.status).json(result);
     }
+
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `⚒️ Player #${playerId || 1} assembled 1x ${item}`,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'CRAFT_ERROR', message: err.message });
@@ -131,7 +149,13 @@ app.post('/api/trades', async (req, res) => {
     if (!result.success) {
       return res.status(result.status).json(result);
     }
+
     emitSocketEvent('NEW_TRADE_OFFER', result.data);
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `📦 New Trade Offer: ${offeredQuantity}x ${offeredItem} for ${demandedQuantity}x ${demandedItem}`,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'TRADE_ERROR', message: err.message });
@@ -152,13 +176,81 @@ app.post('/api/trades/:id/accept', async (req, res) => {
     if (!result.success) {
       return res.status(result.status).json(result);
     }
+
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `🤝 Trade #${tradeId} accepted by Player #${buyerPlayerId}`,
+      timestamp: new Date().toISOString(),
+    });
+
     res.status(result.status).json(result);
   } catch (err) {
     res.status(500).json({ error: 'ACCEPT_ERROR', message: err.message });
   }
 });
 
-// 6. Recent Event Logs (Audit Feed & Ticker)
+// 6. Deployable Machines (Satisfactory-Style Automation)
+app.get('/api/machines', async (req, res) => {
+  try {
+    const result = await query(
+      `SELECT m.*, n.name as node_name, n.resource_type, p.username as owner_name
+       FROM machines m
+       JOIN resource_nodes n ON m.node_id = n.id
+       JOIN players p ON m.player_id = p.id
+       ORDER BY m.id ASC;`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'DB_ERROR', message: err.message });
+  }
+});
+
+app.post('/api/machines/deploy', async (req, res) => {
+  const { playerId, nodeId, machineType } = req.body;
+  try {
+    const result = await deployMachine(
+      parseInt(playerId, 10),
+      parseInt(nodeId, 10),
+      machineType || 'MK1_DRILL'
+    );
+    if (!result.success) {
+      return res.status(result.status).json(result);
+    }
+
+    emitSocketEvent('MACHINE_DEPLOYED', result.data);
+    emitSocketEvent('GLOBAL_TICKER_LOG', {
+      message: `🏭 Player #${playerId} deployed an ${machineType || 'MK-1 Drill'} on node #${nodeId}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    res.status(result.status).json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'DEPLOY_ERROR', message: err.message });
+  }
+});
+
+app.post('/api/machines/:id/collect', async (req, res) => {
+  const machineId = parseInt(req.params.id, 10);
+  const { playerId } = req.body;
+
+  try {
+    const result = await collectMachineBuffer(parseInt(playerId, 10), machineId);
+    if (!result.success) {
+      return res.status(result.status).json(result);
+    }
+
+    emitSocketEvent('MACHINE_BUFFER_UPDATED', {
+      machineId,
+      playerId: parseInt(playerId, 10),
+      bufferUnits: 0,
+    });
+
+    res.status(result.status).json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'COLLECT_ERROR', message: err.message });
+  }
+});
+
+// 7. Recent Event Logs (Audit Feed)
 app.get('/api/events', async (req, res) => {
   try {
     const result = await query(
@@ -171,7 +263,7 @@ app.get('/api/events', async (req, res) => {
 });
 
 // ==============================================================================
-// WEBSOCKET LOGIC (Socket.io)
+// WEBSOCKET LOGIC & BACKGROUND ENGINES
 // ==============================================================================
 
 io.on('connection', (socket) => {
@@ -182,9 +274,13 @@ io.on('connection', (socket) => {
   });
 });
 
+// Start Background Machine & Regeneration Workers
+const machineTickerInterval = startMachineEngine(io, 10000);
+const regenTickerInterval = startRegenerationEngine(io, 25000);
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`[Outpost Server] 🚀 Listening on http://localhost:${PORT}`);
 });
 
-module.exports = { app, server, io };
+module.exports = { app, server, io, machineTickerInterval, regenTickerInterval };

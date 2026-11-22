@@ -56,3 +56,26 @@ Transactional atomicity guarantees zero state corruption or orphan items when ex
   Execution Time: 2.077 ms
 
 ✅ 5,000-Row Scaling Benchmark Completed Successfully!
+
+=== TEST 4: MACHINE CONCURRENCY & AUTHORIZATION EVIDENCE ===
+Timestamp: 2026-11-22T17:49:20+05:30
+================================================================
+🧪 TEST 4: AUTONOMOUS MACHINE ENGINE & AUTHORIZATION TEST
+================================================================
+[Slow Query] {
+  text: 'INSERT INTO inventories (player_id, item_type, quantity)\n   ',
+  duration: 77,
+  rows: 3
+}
+[Step 1] Crafting MK-1 Drill for Player 1...
+  ✅ MK-1 Drill crafted successfully.
+[Step 2] Deploying MK-1 Drill on Node #4...
+  ✅ Machine #2 deployed on Node #4.
+[Step 3] Simulating automated machine harvest tick (Single-statement atomic update)...
+  ✅ Machine buffer currently stored: 1 units.
+[Step 4] Testing unauthorized collection attempt by Player 2 (Security check)...
+  ✅ Authorization enforced: Non-owner rejected with 403 Forbidden!
+[Step 5] Authorized collection by owner (Player 1)...
+  ✅ Collected 1 units of iron_ore. Buffer reset to 0.
+
+✅ ALL MACHINE ENGINE & SECURITY ASSERTIONS PASSED!
