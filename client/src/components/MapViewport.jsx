@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import NodeCard from './NodeCard';
 
 const MAP_WIDTH = 2500;
@@ -17,9 +17,7 @@ export default function MapViewport({
   const dragStart = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0 });
 
-  // Mouse drag handlers for local viewport panning (Zero Server Netcode)
   const handleMouseDown = (e) => {
-    // Only drag with left mouse button when not clicking a button/card
     if (e.button !== 0) return;
     isDragging.current = true;
     dragStart.current = { x: e.clientX, y: e.clientY };
@@ -31,7 +29,6 @@ export default function MapViewport({
     const dx = e.clientX - dragStart.current.x;
     const dy = e.clientY - dragStart.current.y;
 
-    // Constrain pan within reasonable bounds
     const newX = Math.min(200, Math.max(-(MAP_WIDTH - window.innerWidth + 200), panStart.current.x + dx));
     const newY = Math.min(200, Math.max(-(MAP_HEIGHT - window.innerHeight + 200), panStart.current.y + dy));
 
@@ -51,7 +48,7 @@ export default function MapViewport({
       onMouseLeave={handleMouseUp}
       className="relative flex-1 h-[calc(100vh-56px-112px)] overflow-hidden bg-[#030712] cursor-grab active:cursor-grabbing select-none"
     >
-      {/* 2500x1800 Planetary Canvas */}
+      {/* 2500x1800 Atmospheric Planetary Surface */}
       <div
         style={{
           width: `${MAP_WIDTH}px`,
@@ -59,27 +56,35 @@ export default function MapViewport({
           transform: `translate(${panPosition.x}px, ${panPosition.y}px)`,
           transition: isDragging.current ? 'none' : 'transform 0.15s ease-out',
         }}
-        className="relative bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:40px_40px]"
+        className="relative hex-grid-pattern border-2 border-frontier-800/80"
       >
-        {/* Sector Grid Overlay (A-1 through E-5) */}
-        <div className="absolute inset-0 grid grid-cols-5 grid-rows-4 pointer-events-none opacity-20 border border-slate-800">
+        {/* Tactical Sector Coordinate Grid (A-1 through D-5) */}
+        <div className="absolute inset-0 grid grid-cols-5 grid-rows-4 pointer-events-none border border-frontier-800">
           {['A', 'B', 'C', 'D'].map((row) =>
             [1, 2, 3, 4, 5].map((col) => (
               <div
                 key={`${row}-${col}`}
-                className="border border-slate-800/80 p-3 font-mono text-sm text-cyan-400/60 font-bold"
+                className="border border-slate-800/60 p-4 font-mono text-xs text-cyan-400/40 font-bold flex justify-between items-start"
               >
-                SECTOR {row}-{col}
+                <span>SECTOR [{row}-{col}]</span>
+                <span className="text-[9px] text-slate-700">GRID REF // 0{col}</span>
               </div>
             ))
           )}
         </div>
 
-        {/* Ambient Biome Illustrations / Highlights */}
-        <div className="absolute top-[200px] left-[350px] w-96 h-96 bg-emerald-950/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-[350px] left-[1000px] w-[500px] h-[500px] bg-amber-950/25 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-[300px] left-[1650px] w-96 h-96 bg-cyan-950/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-[1200px] left-[1100px] w-80 h-80 bg-purple-950/30 rounded-full blur-3xl pointer-events-none" />
+        {/* Ambient Biome Lighting & Planetary Energy Wells */}
+        <div className="absolute top-[250px] left-[400px] w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-[400px] left-[1150px] w-[600px] h-[600px] bg-amber-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-[350px] left-[1800px] w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute top-[1250px] left-[1200px] w-[550px] h-[550px] bg-purple-600/15 rounded-full blur-[130px] pointer-events-none" />
+
+        {/* Ground Conduit Power Lines (Connecting Nodes to Base) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30">
+          <line x1="450" y1="320" x2="1100" y2="480" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6 6" />
+          <line x1="1100" y1="480" x2="1750" y2="400" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6 6" />
+          <line x1="1100" y1="480" x2="1250" y2="1400" stroke="#a855f7" strokeWidth="2" strokeDasharray="8 8" />
+        </svg>
 
         {/* Render Interactive Resource Nodes */}
         {nodes.map((node) => {
