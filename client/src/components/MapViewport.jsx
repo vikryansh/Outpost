@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import NodeCard from './NodeCard';
 
 const MAP_WIDTH = 2500;
@@ -48,7 +48,7 @@ export default function MapViewport({
       onMouseLeave={handleMouseUp}
       className="relative flex-1 h-[calc(100vh-56px-112px)] overflow-hidden bg-[#030712] cursor-grab active:cursor-grabbing select-none"
     >
-      {/* 2500x1800 Atmospheric Planetary Surface */}
+      {/* 2500x1800 Atmospheric Terrain Canvas */}
       <div
         style={{
           width: `${MAP_WIDTH}px`,
@@ -56,37 +56,60 @@ export default function MapViewport({
           transform: `translate(${panPosition.x}px, ${panPosition.y}px)`,
           transition: isDragging.current ? 'none' : 'transform 0.15s ease-out',
         }}
-        className="relative hex-grid-pattern border-2 border-frontier-800/80"
+        className="relative hex-grid-pattern border-2 border-frontier-800"
       >
-        {/* Tactical Sector Coordinate Grid (A-1 through D-5) */}
+        {/* Sector Grid Overlay with High-Tech Tactical Borders */}
         <div className="absolute inset-0 grid grid-cols-5 grid-rows-4 pointer-events-none border border-frontier-800">
           {['A', 'B', 'C', 'D'].map((row) =>
             [1, 2, 3, 4, 5].map((col) => (
               <div
                 key={`${row}-${col}`}
-                className="border border-slate-800/60 p-4 font-mono text-xs text-cyan-400/40 font-bold flex justify-between items-start"
+                className="border border-slate-800/60 p-4 font-mono text-xs text-cyan-400/30 font-bold flex justify-between items-start"
               >
                 <span>SECTOR [{row}-{col}]</span>
-                <span className="text-[9px] text-slate-700">GRID REF // 0{col}</span>
+                <span className="text-[9px] text-slate-700">COORD // 0{col}</span>
               </div>
             ))
           )}
         </div>
 
-        {/* Ambient Biome Lighting & Planetary Energy Wells */}
-        <div className="absolute top-[250px] left-[400px] w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-[400px] left-[1150px] w-[600px] h-[600px] bg-amber-600/15 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute top-[350px] left-[1800px] w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-[1250px] left-[1200px] w-[550px] h-[550px] bg-purple-600/15 rounded-full blur-[130px] pointer-events-none" />
+        {/* Ambient Biome Lighting Wells */}
+        <div className="absolute top-[200px] left-[350px] w-[550px] h-[550px] bg-emerald-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-[350px] left-[1050px] w-[650px] h-[650px] bg-amber-600/20 rounded-full blur-[150px] pointer-events-none" />
+        <div className="absolute top-[300px] left-[1700px] w-[550px] h-[550px] bg-cyan-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-[1200px] left-[1100px] w-[600px] h-[600px] bg-purple-600/20 rounded-full blur-[140px] pointer-events-none" />
 
-        {/* Ground Conduit Power Lines (Connecting Nodes to Base) */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30">
-          <line x1="450" y1="320" x2="1100" y2="480" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6 6" />
-          <line x1="1100" y1="480" x2="1750" y2="400" stroke="#06b6d4" strokeWidth="2" strokeDasharray="6 6" />
-          <line x1="1100" y1="480" x2="1250" y2="1400" stroke="#a855f7" strokeWidth="2" strokeDasharray="8 8" />
+        {/* Terrain Visual Crags & Craters */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-40">
+          {/* Volcanic fissure near Iron Ridge */}
+          <path
+            d="M1020,440 L1080,470 L1150,450 L1220,510 L1290,490"
+            fill="none"
+            stroke="#f59e0b"
+            strokeWidth="3"
+            strokeDasharray="8 4"
+            className="animate-pulse"
+          />
+          {/* Forest boundary moss lines */}
+          <path
+            d="M380,280 Q450,220 560,260 T680,340"
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="2.5"
+            strokeDasharray="12 6"
+          />
+          {/* Subterranean crystal chasm */}
+          <path
+            d="M1150,1320 L1220,1380 L1310,1350 L1380,1430"
+            fill="none"
+            stroke="#c084fc"
+            strokeWidth="3"
+            strokeDasharray="10 5"
+            className="animate-pulse"
+          />
         </svg>
 
-        {/* Render Interactive Resource Nodes */}
+        {/* Render Interactive Resource Nodes with Visual Biome Dioramas */}
         {nodes.map((node) => {
           const attachedMachine = machines.find((m) => m.node_id === node.id);
           return (
