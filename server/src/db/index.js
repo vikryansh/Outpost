@@ -4,16 +4,30 @@ const path = require('path');
 
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5433', 10),
-  user: process.env.DB_USER || 'outpost_user',
-  password: process.env.DB_PASSWORD || 'outpost_password',
-  database: process.env.DB_NAME || 'outpost_db',
-  max: 50, // High pool capacity for 40-concurrent race testing
-  idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
-});
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.DATABASE_URL;
+
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false, // Required for cloud databases like Supabase
+      },
+      max: 50,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 10000,
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5433', 10),
+      user: process.env.DB_USER || 'outpost_user',
+      password: process.env.DB_PASSWORD || 'outpost_password',
+      database: process.env.DB_NAME || 'outpost_db',
+      max: 50,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000,
+    };
+
+const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('[PostgreSQL Pool Error]', err);
